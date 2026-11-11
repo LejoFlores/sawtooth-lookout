@@ -1,5 +1,6 @@
 """index.html and figures for the products folder."""
 import html
+import json
 
 import numpy as np
 import pandas as pd
@@ -64,37 +65,38 @@ def cell(v, alerting, alert_ev):
 
 
 def write(o, h, root=True):
-    """Dated page products/YYYYMMDD/index.html always; the root page and figure only when `root` (newest start)."""
+    """Dated pages products/YYYYMMDD/ (index.html, basin/<key>.html) always; the root pages and figure only when
+    `root` (newest start)."""
     p = C.PRODUCTS
     h = h[h.init <= o["init"]]
     day = p / o["init"].replace("-", "")
     day.mkdir(parents=True, exist_ok=True)
     figure(o, h, day / "alarms.png")
+    copy_assets(p)
     if root:
         figure(o, h, p / "alarms.png")
     for where, up in ([(day, "../")] + ([(p, "")] if root else [])):
         (where / "index.html").write_text(render(o, h, up))
+        (where / "basin").mkdir(exist_ok=True)
+        for bn in o["basins"]:
+            (where / "basin" / f"{bn}.html").write_text(render_basin(o, h, bn, up + "../"))
     write_archive(h)
 
 
-def render(o, h, up):
-    evs = C.A["events"] + C.A["watch_events"]
-    head = "".join(f"<th>{EV_LABEL[e]}{'' if e in C.A['events'] else '<br><small>(watch only)</small>'}</th>" for e in evs)
-    rows = "".join(f"<tr><th>{html.escape(b['name'])}</th>" +
-                   "".join(cell(b["week2"][e], o["alerting"], e in C.A["events"]) for e in evs) + "</tr>"
-                   for b in o["basins"].values())
-    frows = "".join(f"<tr><th>{html.escape(b['name'])}</th>" +
-                    "".join(f"<td>{b['fortnight_gefs'][e]['odds']:.0%}</td>" for e in C.A["events"]) + "</tr>"
-                    for b in o["basins"].values())
-    alerts = ("<ul>" + "".join(f"<li><b>{html.escape(C.CFG['basins'][a['basin']])}</b>: {EV_LABEL[a['event']]} "
-                               f"week 2, odds {a['odds']:.0%}</li>" for a in o["alerts"]) + "</ul>") if o["alerts"] \
-        else "<p>No alerts.</p>"
+def copy_assets(p):
+    """Leaflet and the map layers, at the products root (shared by every day's pages)."""
+    import shutil
+    shutil.copytree(C.HERE / "vendor" / "leaflet", p / "vendor" / "leaflet", dirs_exist_ok=True)
+    shutil.copytree(C.STATIC / "map", p / "map", dirs_exist_ok=True)
+
+
+def shell(o, up, title, body, head_extra=""):
     sysline = ", ".join(f"{k.upper()} {v} members" for k, v in o["systems"].items())
     note = "" if o["alerting"] else (f"<p class=warn>{o['season']} is outside the alerting season "
                                      "(Nov-Feb); odds are shown for reference.</p>")
-    page = f"""<!doctype html><html lang=en><head><meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1"><title>Sawtooth Lookout</title>
-<style>
+    return f"""<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
+{head_extra}<style>
 :root{{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}}}
 body{{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}}
@@ -103,21 +105,58 @@ th{{font-weight:600}} td b{{display:block;font-size:17px}} td span{{color:var(--
 td.hi{{background:var(--hi)}} td.hi b{{color:var(--hib)}} td.mid{{background:var(--mid)}} td.lo{{background:var(--lo)}}
 td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} img{{max-width:100%}}
 .wrap{{overflow-x:auto}} {TREND_CSS} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
-{PLUME_CSS}
+{PLUME_CSS}{MAP_CSS}
 </style></head><body>
 <h1><a href="{up or './'}" style="text-decoration:none">Sawtooth Lookout</a></h1>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>{o['init']}</b> 00 UTC ({sysline}). Week 2 = <b>{o['week2_dates'][0]} to {o['week2_dates'][1]}</b>.</p>
-{note}<h2>Alerts</h2>{alerts}
+{note}{body}
+<p class=mut>&copy; 2026 Lejo Flores and Boise State University. Products licensed
+<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; code (Apache 2.0) at
+<a href="https://github.com/LejoFlores/sawtooth-lookout">github.com/LejoFlores/sawtooth-lookout</a>.</p>
+<p class=mut><a href="{up}archive.html">Past days</a> · <a href="{up}history.csv">history.csv</a> ·
+<a href="{up}latest.json">latest.json</a></p>
+</body></html>"""
+
+
+def odds_table(o, basins, link=True):
+    evs = C.A["events"] + C.A["watch_events"]
+    head = "".join(f"<th>{EV_LABEL[e]}{'' if e in C.A['events'] else '<br><small>(watch only)</small>'}</th>" for e in evs)
+    rows = "".join(f"<tr><th>{(f'<a href=' + chr(39) + f'basin/{bn}.html' + chr(39) + '>' + html.escape(b['name']) + '</a>') if link else html.escape(b['name'])}</th>" +
+                   "".join(cell(b["week2"][e], o["alerting"], e in C.A["events"]) for e in evs) + "</tr>"
+                   for bn, b in o["basins"].items() if bn in basins)
+    return f"<div class=wrap><table><tr><th>Basin</th>{head}</tr>{rows}</table></div>"
+
+
+ODDS_NOTE = ("<p class=mut>Calibrated odds that the week ends in the tail of basin climate (driest, warm-and-driest or "
+             "cold-and-wettest 10%), against the usual rate. Red: at or above the {lvl:.0%} alert level. Amber: at least "
+             "1.5 times the usual rate. Hover for each model's raw member share.</p>")
+
+
+def render_basin(o, h, bn, up):
+    b = o["basins"][bn]
+    body = (f"<p><a href='../'>&larr; Map and all basins</a></p><h2>{html.escape(b['name'])}</h2>"
+            f"<h3>Week-2 odds</h3>{ODDS_NOTE.format(lvl=C.A['alert_odds'])}{odds_table(o, [bn], link=False)}"
+            f"{trend_section(o, h, [bn]).replace('<h2>', '<h3>').replace('</h2>', '</h3>')}"
+            f"{plume_section(o, [bn])}")
+    return shell(o, up, f"Sawtooth Lookout: {b['name']}", body)
+
+
+def render(o, h, up):
+    frows = "".join(f"<tr><th>{html.escape(b['name'])}</th>" +
+                    "".join(f"<td>{b['fortnight_gefs'][e]['odds']:.0%}</td>" for e in C.A["events"]) + "</tr>"
+                    for b in o["basins"].values())
+    alerts = ("<ul>" + "".join(f"<li><a href='basin/{a['basin']}.html'><b>{html.escape(C.CFG['basins'][a['basin']])}</b></a>: "
+                               f"{EV_LABEL[a['event']]} week 2, odds {a['odds']:.0%}</li>" for a in o["alerts"]) + "</ul>") \
+        if o["alerts"] else "<p>No alerts.</p>"
+    body = f"""<h2>Alerts</h2>{alerts}
+{map_section(o, h, up)}
 <h2>Week-2 odds</h2>
-<p class=mut>Calibrated odds that the week ends in the tail of basin climate (driest, warm-and-driest or cold-and-wettest
-10%), against the usual rate. Red: at or above the {C.A['alert_odds']:.0%} alert level. Amber: at least 1.5 times the usual
-rate. Hover for each model's raw member share.</p>
-<div class=wrap><table><tr><th>Basin</th>{head}</tr>{rows}</table></div>
+{ODDS_NOTE.format(lvl=C.A['alert_odds'])}
+{odds_table(o, list(o['basins']))}
 {trend_section(o, h)}
 <img src="alarms.png" alt="Member percentiles and recent odds by basin">
-{plume_section(o)}
 <h2>Days 8-21 (GEFS only, heads-up)</h2>
 <p class=mut>ECMWF open data stops at day 15, so the fortnight uses GEFS alone. Its hindcast skill is lower; it never alerts.</p>
 <div class=wrap><table><tr><th>Basin</th>{''.join(f'<th>{EV_LABEL[e]}</th>' for e in C.A['events'])}</tr>{frows}</table></div>
@@ -126,16 +165,12 @@ rate. Hover for each model's raw member share.</p>
 climate (GEFSv12 2000-2019, ECMWF 2006-2025, starts within 21 days of the date). The share of members in the tail,
 GEFS and ECMWF half each, is turned into odds with a logistic fit to the 2000-2025 hindcast for the season.
 Nov-Feb hindcast at the 15% alert level: about 2.5-5 alerts a winter per basin, right 24-29% of the time against a
-9-13% base rate, catching about half to two-thirds of events.
+9-13% base rate, catching about half to two-thirds of events. The member-by-member tables are on each basin's page.
 Truth: PRISM Climate Group, Oregon State University (basin means). Forecast data: NOAA GEFS via dynamical.org;
-ECMWF open data, &copy; ECMWF, CC BY 4.0 (reduced here to basin statistics).</p>
-<p class=mut>&copy; 2026 Lejo Flores and Boise State University. Products licensed
-<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; code (Apache 2.0) at
-<a href="https://github.com/LejoFlores/sawtooth-lookout">github.com/LejoFlores/sawtooth-lookout</a>.</p>
-<p class=mut><a href="{up}archive.html">Past days</a> · <a href="{up}history.csv">history.csv</a> ·
-<a href="{up}latest.json">latest.json</a></p>
-</body></html>"""
-    return page
+ECMWF open data, &copy; ECMWF, CC BY 4.0 (reduced here to basin statistics). Basin boundaries: USGS Watershed
+Boundary Dataset. State outline: US Census via us-atlas.</p>"""
+    return shell(o, up, "Sawtooth Lookout", body,
+                 f"<link rel=stylesheet href='{up}vendor/leaflet/leaflet.css'><script src='{up}vendor/leaflet/leaflet.js'></script>")
 
 
 # ------------------------------------------------------------------------------------- member plume tables (per basin)
@@ -253,12 +288,14 @@ padding:0 4px;margin-right:2px;font-weight:700} .key span{display:inline-block;p
 """
 
 
-def plume_section(o):
-    secs = "".join(plume_table(o, bn) for bn in o["basins"])
+def plume_section(o, basins=None):
+    basins = list(o["basins"]) if basins is None else basins
+    secs = "".join(plume_table(o, bn) for bn in basins)
     if not secs:
         return ""
     key = "".join(f"<span style='background:{bg};color:{fg}'>{lab}</span>" for _, lab, bg, fg in PSCALE)
-    nav = "".join(f"<a href='#plume-{bn}'>{html.escape(b['name'])}</a>" for bn, b in o["basins"].items())
+    nav = "".join(f"<a href='#plume-{bn}'>{html.escape(o['basins'][bn]['name'])}</a>" for bn in basins) \
+        if len(basins) > 1 else ""
     return (f"<h2>Members, day by day</h2><p class=mut>Running basin-mean precipitation total (inches) from the start, "
             f"one row per member, wettest first by the end of week 2. Week 2 is shaded in the header. Flags mark "
             f"members whose week 2 is in an alarm tail of their own model's climate, and their week-2 cells are "
@@ -306,13 +343,16 @@ def moves(h, init):
     return [t for _, t in sorted(out, key=lambda z: -z[0])]
 
 
-def trend_section(o, h):
+def trend_section(o, h, basins=None):
+    h = h if basins is None else h[h.basin.isin(basins)]
     inits = sorted(h.init.unique())[-TREND_RUNS:]
     if len(inits) < 2:
         return ("<h2>How the odds are changing</h2><p class=mut>The trend starts with the next run.</p>")
     hd = "".join(f"<th>{pd.Timestamp(i):%b %-d}</th>" for i in inits)
     rows = []
     for bn, b in o["basins"].items():
+        if basins is not None and bn not in basins:
+            continue
         for k, ev in enumerate(C.A["events"]):
             g = h[(h.basin == bn) & (h.event == ev)].set_index("init").odds
             vals = [g.get(i, np.nan) for i in inits]
@@ -320,7 +360,7 @@ def trend_section(o, h):
                             f"<td class='{'hi' if v >= C.A['alert_odds'] else 'lo'}'>{v:.0%}</td>" for v in vals)
             d = vals[-1] - vals[-2] if len(vals) > 1 else np.nan
             cls, arr = _arrow(d)
-            txt = f"{arr} {abs(d) * 100:.0f}" if cls != "steady" else f"{d * 100:+.0f}"
+            txt = f"{arr} {abs(d) * 100:.0f}" if cls != "steady" else (f"{d * 100:+.0f}" if round(d * 100) else "0")
             chg = f"<td class={cls}>{txt}</td>" if np.isfinite(d) else "<td class=na></td>"
             lead = f"<th rowspan={len(C.A['events'])}>{html.escape(b['name'])}</th>" if k == 0 else ""
             rows.append(f"<tr>{lead}<th>{EV_LABEL[ev]}</th>{cells}{chg}</tr>")
@@ -351,3 +391,71 @@ def write_archive(h):
         "a{color:#93c5fd} td,th{border-color:#1f2937}}</style></head><body><h1><a href='./'>Sawtooth Lookout</a>"
         " archive</h1><p><b>Experimental research product. Not an official forecast.</b></p><table><tr><th>Start"
         "</th><th>Alerts (week-2 odds)</th></tr>" + "".join(rows) + "</table></body></html>")
+
+
+# ------------------------------------------------------------------------------------------------------------- map
+MAP_CSS = """
+#map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
+.leaflet-tooltip{font:13px/1.35 system-ui,sans-serif}
+"""
+LEVEL = {"hi": ("#dc2626", "at or above the alert level"), "mid": ("#f59e0b", "elevated (1.5x usual or more)"),
+         "lo": ("#0f766e", "near normal")}
+
+
+def basin_status(o, h):
+    """Per active basin: map level, tooltip lines (odds and change from the previous run)."""
+    prev = h[h.init < o["init"]].sort_values("init").groupby(["basin", "event"]).odds.last()
+    out = {}
+    for bn, b in o["basins"].items():
+        lv = "lo"
+        lines = []
+        for ev in C.A["events"]:
+            v = b["week2"][ev]
+            if v["odds"] >= C.A["alert_odds"]:
+                lv = "hi"
+            elif v["odds"] >= 1.5 * v["base_rate"] and lv == "lo":
+                lv = "mid"
+            d = v["odds"] - prev.get((bn, ev), np.nan)
+            arr = "" if not np.isfinite(d) else (" ▲" if d >= STEP else (" ▼" if d <= -STEP else ""))
+            lines.append(f"{EV_LABEL[ev]}: {v['odds']:.0%}{arr}")
+        out[bn] = dict(level=lv, color=LEVEL[lv][0], name=b["name"], lines=lines)
+    return out
+
+
+def map_section(o, h, up):
+    st = json.dumps(basin_status(o, h))
+    legend = "".join(f"<span style='background:{c}'></span>{t}" for c, t in LEVEL.values()) + \
+        "<span style='background:#cbd5e1'></span>coming soon"
+    return f"""<h2>Basins</h2>
+<p class=mut>Shaded by the highest week-2 odds among warm-dry, dry and cold-wet. Click a basin for its odds trend and
+member-by-member table. Grey basins are not forecast yet: coming soon.</p>
+<div id=map></div><p class="mut legend">{legend}</p>
+<script>
+(function(){{
+  if (!window.L) return;
+  var S = {st}, up = {json.dumps(up)};
+  var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([45.0, -114.6], 6);
+  L.tileLayer('https://{{s}}.basemaps.cartocdn.com/' + (dark ? 'dark_all' : 'light_all') + '/{{z}}/{{x}}/{{y}}{{r}}.png',
+    {{maxZoom: 10, attribution: '&copy; OpenStreetMap contributors &copy; CARTO'}}).addTo(m);
+  function get(u) {{ return fetch(up + u).then(function(r) {{ return r.json(); }}); }}
+  Promise.all([get('map/others.geojson'), get('map/idaho.geojson'), get('map/active.geojson')]).then(function(g) {{
+    L.geoJSON(g[0], {{style: {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}},
+      onEachFeature: function(f, l) {{ l.bindTooltip('<b>' + f.properties.name + '</b><br>Coming soon', {{sticky: true}}); }}
+    }}).addTo(m);
+    L.geoJSON(g[1], {{style: {{color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}}, interactive: false}}).addTo(m);
+    var act = L.geoJSON(g[2], {{
+      style: function(f) {{ var s = S[f.properties.basin]; return {{color: '#0f172a', weight: 1.5, fillColor: s.color, fillOpacity: 0.55}}; }},
+      onEachFeature: function(f, l) {{
+        var s = S[f.properties.basin];
+        l.bindTooltip('<b>' + s.name + '</b><br>' + s.lines.join('<br>') + '<br><i>Click for details</i>', {{sticky: true}});
+        l.on('click', function() {{ location.href = 'basin/' + f.properties.basin + '.html'; }});
+        l.on('mouseover', function() {{ l.setStyle({{weight: 3}}); }});
+        l.on('mouseout', function() {{ l.setStyle({{weight: 1.5}}); }});
+      }}
+    }}).addTo(m);
+    m.fitBounds(L.geoJSON(g[1]).getBounds(), {{padding: [4, 4]}});
+  }});
+}})();
+</script>"""
