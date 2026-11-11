@@ -1,0 +1,30 @@
+# Sawtooth Lookout: week-2 tail-risk alarms for five Idaho basins. Paths are relative to this file's folder.
+
+[source]
+gefs_forecast = "https://data.dynamical.org/noaa/gefs/forecast-35-day/latest.zarr"
+# ECMWF open data (CC BY 4.0), AWS mirror. ENS 0.25 deg, 51 members, 00 UTC to 360 h, so it covers days 1-15 only.
+ecmwf_open = "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com"
+
+[basins]
+# key = label. Basin polygons: static/basins.gpkg (USGS gauge drainage areas from WBD HUC12s).
+sf_payette_lowman = "SF Payette at Lowman"
+weiser_nr_weiser = "Weiser near Weiser"
+boise_nr_boise = "Boise above Lucky Peak"
+big_wood_hailey = "Big Wood at Hailey"
+snake_heise = "Snake above Heise"
+
+[alarms]
+# Forecast day d of a start t0 is the UTC calendar day t0 + d - 1, as in the reforecast hindcast.
+week2 = [8, 14]           # the deciding window: GEFS and ECMWF, half weight each
+fortnight = [8, 21]       # GEFS only (ECMWF open data stops at day 15); shown on the page, never alerts
+tail = 0.10               # a member "alarms" when it is beyond its own reforecast climate's 10th/90th percentile
+doy_halfwidth = 21        # reforecast climate: starts within +-21 days of year of the live start
+events = ["warm-dry", "dry", "cold-wet"]          # alerting events, in display order
+watch_events = ["wet", "warm", "cold"]            # shown on the page only
+alert_odds = 0.15         # calibrated odds that open an alert (see static/hindcast_scores.csv)
+seasons = { "Nov-Feb" = [11, 12, 1, 2], "Mar-Apr" = [3, 4], "May-Jun" = [5, 6] }
+alert_seasons = ["Nov-Feb"]
+
+[output]
+static = "static"
+products = "products"     # overridden by $EWS_PRODUCTS

@@ -1,0 +1,107 @@
+name: Sawtooth Lookout daily alarms
+
+on:
+  schedule:
+    - cron: "30 18 * * *"          # GEFS 00 UTC is in the dynamical.org archive by then; ECMWF open data since ~08 UTC
+  push:                            # test runs on development branches: products to products-test, no issues, no Pages
+    branches: ["claude/**"]
+    paths: [ews/**, scripts/**, static/**, config.toml, requirements.txt, .github/workflows/lookout.yml]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily, replay or both"
+        default: daily
+      init:
+        description: "Start date (YYYY-MM-DD) or latest"
+        default: latest
+      publish:
+        description: "Commit products, update the site and open/close alert issues"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  issues: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: lookout-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  alarms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      MODE: ${{ inputs.mode || (contains(github.event.head_commit.message, '[replay]') && 'both' || 'daily') }}
+      PUBLISH: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish) }}
+      BRANCH: ${{ github.event_name == 'push' && 'products-test' || 'products' }}
+      EWS_PRODUCTS: ${{ github.workspace }}/../products
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install
+        run: python -m pip install -r requirements.txt
+
+      - name: Check out the products branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git fetch --depth 1 origin "$BRANCH"
+            git worktree add -B "$BRANCH" "$EWS_PRODUCTS" FETCH_HEAD
+          else
+            git worktree add --orphan -b "$BRANCH" "$EWS_PRODUCTS"
+          fi
+
+      - name: Alarms
+        if: env.MODE == 'daily' || env.MODE == 'both'
+        env:
+          INIT: ${{ inputs.init || 'latest' }}
+        run: python -m ews.run_daily --init "$INIT"
+
+      - name: Alert issues
+        if: env.MODE == 'daily' || env.MODE == 'both'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EWS_PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: |
+          if [ "$PUBLISH" = "true" ]; then python -m ews.notify; else python -m ews.notify --dry-run; fi
+
+      - name: Replay past winters
+        if: env.MODE == 'replay' || env.MODE == 'both'
+        run: python scripts/replay.py
+
+      - name: Commit products
+        if: always() && (env.PUBLISH == 'true' || github.event_name == 'push')
+        working-directory: ${{ env.EWS_PRODUCTS }}
+        run: |
+          cp "$GITHUB_WORKSPACE/LICENSE-products.md" . 2>/dev/null || true
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -q -m "Sawtooth Lookout $(jq -r .init latest.json 2>/dev/null || date -u +%F)"
+          git push origin "$BRANCH"
+
+      - name: Package the site
+        if: env.PUBLISH == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.EWS_PRODUCTS }}
+
+  site:
+    needs: alarms
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
