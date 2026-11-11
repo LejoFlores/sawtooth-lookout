@@ -207,7 +207,7 @@ def plume_table(o, bn):
             else:
                 bg, fg = _pcol(x)
                 cells.append(f"<td style='background:{bg};color:{fg}'>{_fmt(x)}</td>")
-        return f"<tr class=sum><th colspan=4>{label}</th>{''.join(cells)}</tr>"
+        return f"<tr class=sum><th colspan=5>{label}</th>{''.join(cells)}</tr>"
     body = [stat_row("Mean", np.mean), stat_row("Median", np.median),
             stat_row("% members with 0.1 in+", lambda v: 100 * np.mean(v >= 0.1))]
     for r in rows:
@@ -225,17 +225,22 @@ def plume_table(o, bn):
             cells.append(f"<td style='background:{bg};color:{fg}{ring}'>{_fmt(r['cum'][i])}</td>")
         tot = r["cum"][-1]
         bg, fg = _pcol(tot)
+        c = r["cum"]
+        wk = c[min(w1, len(c)) - 1] - (c[w0 - 2] if w0 >= 2 else 0.0)                   # week-2 total (in)
+        wbg, wfg = _pcol(wk)
         rows_html = (f"<tr><th{edge}>{r['sys'].upper()} {r['k'] + 1}</th>"
-                     f"<td style='background:{bg};color:{fg}'><b>{_fmt(tot)}</b></td>"
+                     f"<td style='background:{wbg};color:{wfg}'><b>{_fmt(wk) or '0'}</b><br><small style='color:inherit;opacity:.85'>{r['P']:.0%}</small></td>"
                      f"<td style='background:{_tcol(r['T'])}'>{r['T']:.0%}</td>"
-                     f"<td class=flags>{chips}</td>{''.join(cells)}</tr>")
+                     f"<td class=flags>{chips}</td>"
+                     f"<td style='background:{bg};color:{fg}'><b>{_fmt(tot)}</b></td>{''.join(cells)}</tr>")
         body.append(rows_html)
     nflag = {e: sum(e in r["ev"] for r in rows) for e in FLAG}
     summ = " · ".join(f"<span class=chip style='background:{FLAG[e][1]}'>{FLAG[e][0]}</span> {EV_LABEL[e]}: "
                       f"{n} of {len(rows)} members" for e, n in nflag.items())
     return (f"<section id='plume-{bn}'><h3>{html.escape(b['name'])}</h3><p class=mut>{summ}</p>"
-            f"<div class=wrap><table class=plume><tr><th>Member</th><th>Total<br><small>in</small></th>"
-            f"<th>Wk-2 T<br><small>pctile</small></th><th>Flags</th>{hdr}</tr>{''.join(body)}</table></div></section>")
+            f"<div class=wrap><table class=plume><tr><th>Member</th><th>Wk-2 P<br><small>in / pctile</small></th>"
+            f"<th>Wk-2 T<br><small>pctile</small></th><th>Flags</th><th>Total<br><small>in</small></th>{hdr}</tr>"
+            f"{''.join(body)}</table></div></section>")
 
 
 PLUME_CSS = """
@@ -257,8 +262,10 @@ def plume_section(o):
     return (f"<h2>Members, day by day</h2><p class=mut>Running basin-mean precipitation total (inches) from the start, "
             f"one row per member, wettest first by the end of week 2. Week 2 is shaded in the header. Flags mark "
             f"members whose week 2 is in an alarm tail of their own model's climate, and their week-2 cells are "
-            f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>CW</b> cold-wet. Wk-2 T is the member's week-2 temperature "
-            f"percentile. ECMWF members stop at day 15.</p><p class=key>Colour key (in): {key}</p>"
+            f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>CW</b> cold-wet. Wk-2 P is the member's days 8-14 "
+            f"precipitation (inches) and its percentile in its own model's climate; Wk-2 T is its week-2 temperature "
+            f"percentile. Flags depend on week 2 only. ECMWF members stop at day 15, so their Total covers 15 days, "
+            f"not 21.</p><p class=key>Colour key (in): {key}</p>"
             f"<p class=basins>{nav}</p>{secs}")
 
 
