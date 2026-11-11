@@ -21,6 +21,7 @@ def figure(o, h, path):
     for k, (bn, b) in enumerate(o["basins"].items()):
         ax = axs[0, k]
         ax.axhspan(0, t, color="#fde68a", alpha=.5, lw=0)
+        ax.axhspan(1 - t, 1, color="#99f6e4", alpha=.6, lw=0)
         ax.axvspan(1 - t, 1, color="#fecaca", alpha=.5, lw=0)
         ax.axvspan(0, t, color="#bfdbfe", alpha=.5, lw=0)
         for s, mk, c in (("gefs", "o", "#334155"), ("ecmwf", "^", "#0f766e")):
@@ -30,9 +31,11 @@ def figure(o, h, path):
         ax.set(xlim=(0, 1), ylim=(0, 1), title=b["name"], xlabel="temperature percentile")
         if k == 0:
             ax.set_ylabel("precipitation percentile")
-            ax.legend(loc="upper left", fontsize=8, frameon=False)
+            ax.legend(loc="upper left", bbox_to_anchor=(.1, .9), fontsize=8, frameon=False)
         ax.text(.98, .02, "warm", ha="right", va="bottom", fontsize=8, color="#991b1b")
         ax.text(.02, .02, "dry", ha="left", va="bottom", fontsize=8, color="#92400e")
+        ax.text(.98, .98, "wet", ha="right", va="top", fontsize=8, color="#0f766e")
+        ax.text(.02, .12, "cold", ha="left", va="bottom", fontsize=8, color="#1e40af")
         ax = axs[1, k]
         g = h[h.basin == bn].copy()
         g["init"] = pd.to_datetime(g.init)
