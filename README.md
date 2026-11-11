@@ -18,11 +18,12 @@ Payette at Lowman, Weiser near Weiser, Boise above Lucky Peak, Big Wood at Haile
    21. Add ECMWF ENS (50 members, ECMWF open data on AWS) for the same start when it is available; it goes to day 15.
 2. Compute basin-area-weighted week-2 mean 2 m temperature and total precipitation for each member.
 3. Rank each member within its own model's reforecast climate (GEFSv12 2000-2019; ECMWF CY49R1 2006-2025), using
-   starts within 21 days of the date. The warm-dry index is z(T) − z(√P).
+   starts within 21 days of the date. The warm-dry index is z(T) − z(√P) and the
+   warm-wet (rain-on-snow) index is z(T) + z(√P).
 4. Compute the share of members beyond the 10th/90th percentile, with GEFS and ECMWF weighted half each.
 5. Turn the share into odds with a logistic calibration per event and season, fit to the hindcast
    (`static/calibration.csv`).
-6. From November through February, when the odds of warm-dry, dry or cold-wet reach 15%, open an alert issue. While
+6. From November through February, when the odds of warm-dry, dry, warm-wet or cold-wet reach 15%, open an alert issue. While
    the alarm holds, the issue gets a daily comment; it closes when the alarm clears.
 
 Days 8-21 from GEFS alone are shown as a heads-up and never alert.
@@ -42,10 +43,15 @@ Hindcast, Nov-Feb, GEFS+ECMWF reforecasts, 15 winters, leave-one-winter-out cali
 |---|---|---|---|---|---|---|
 | Warm-dry | 0.83 | +0.12 | 2.6 | 28% | 51% | 9% |
 | Dry | 0.78 | +0.11 | 3.0 | 24% | 49% | 9% |
+| Warm-wet | 0.69 | +0.08 | 3.7 | 22% | 48% | 11% |
 | Cold-wet | 0.79 | +0.17 | 5.0 | 29% | 71% | 13% |
 
+Warm-wet is weaker in winter but stronger in March-April (ROC 0.76, Brier skill +0.17, right 30% against a 16%
+base rate), when rain-on-snow matters most. Alerts currently run November through February only.
+
 Replay of the real-time forecasts against PRISM (`scripts/replay.py`):
-- **GEFS alone, WY2021-2026:** ROC 0.85 for warm-dry, 0.80 for dry and 0.88 for cold-wet.
+- **GEFS alone, WY2021-2026:** ROC 0.85 for warm-dry, 0.80 for dry and 0.88 for cold-wet
+  (warm-wet not yet replayed).
 - **GEFS+ECMWF, WY2025-2026:** ROC 0.79, 0.75 and 0.88.
 
 Read these as rough guides. Tail events are rare, so the samples are small.

@@ -49,7 +49,7 @@ def system_shares(clim, t0, T, P, window):
 def member_rows(pc, bi, daily):
     """Per member: week-2 percentiles and the alerting/watch events whose tail the member is in."""
     t = C.A["tail"]
-    o = {k: np.round(pc[k][:, bi], 3).tolist() for k in ("T", "P", "WD")}
+    o = {k: np.round(pc[k][:, bi], 3).tolist() for k in ("T", "P", "WD", "WW")}
     o["events"] = [[ev for ev, (st, tail) in C.EVENTS.items()
                     if (pc[st][m, bi] <= t if tail == "lo" else pc[st][m, bi] >= 1 - t)]
                    for m in range(pc["T"].shape[0])]

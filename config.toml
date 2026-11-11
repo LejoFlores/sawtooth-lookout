@@ -19,7 +19,7 @@ week2 = [8, 14]           # the deciding window: GEFS and ECMWF, half weight eac
 fortnight = [8, 21]       # GEFS only (ECMWF open data stops at day 15); shown on the page, never alerts
 tail = 0.10               # a member "alarms" when it is beyond its own reforecast climate's 10th/90th percentile
 doy_halfwidth = 21        # reforecast climate: starts within +-21 days of year of the live start
-events = ["warm-dry", "dry", "cold-wet"]          # alerting events, in display order
+events = ["warm-dry", "dry", "warm-wet", "cold-wet"]   # alerting events, in display order
 watch_events = ["wet", "warm", "cold"]            # shown on the page only
 alert_odds = 0.15         # calibrated odds that open an alert (see static/hindcast_scores.csv)
 seasons = { "Nov-Feb" = [11, 12, 1, 2], "Mar-Apr" = [3, 4], "May-Jun" = [5, 6] }

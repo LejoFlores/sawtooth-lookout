@@ -7,9 +7,9 @@ import pandas as pd
 
 from . import common as C
 
-EV_LABEL = {"warm-dry": "Warm-dry (snow eater)", "dry": "Dry", "cold-wet": "Cold-wet", "wet": "Wet", "warm": "Warm",
+EV_LABEL = {"warm-dry": "Warm-dry (snow eater)", "dry": "Dry", "warm-wet": "Warm-wet (rain-on-snow)", "cold-wet": "Cold-wet", "wet": "Wet", "warm": "Warm",
             "cold": "Cold"}
-COL = {"warm-dry": "#c2410c", "dry": "#b45309", "cold-wet": "#1d4ed8"}
+COL = {"warm-dry": "#c2410c", "dry": "#b45309", "warm-wet": "#be185d", "cold-wet": "#1d4ed8"}
 
 
 def figure(o, h, path):
@@ -164,8 +164,9 @@ def render(o, h, up):
 <p class=mut>Each member's basin-mean week-2 temperature and precipitation is ranked within its own model's reforecast
 climate (GEFSv12 2000-2019, ECMWF 2006-2025, starts within 21 days of the date). The share of members in the tail,
 GEFS and ECMWF half each, is turned into odds with a logistic fit to the 2000-2025 hindcast for the season.
-Nov-Feb hindcast at the 15% alert level: about 2.5-5 alerts a winter per basin, right 24-29% of the time against a
-9-13% base rate, catching about half to two-thirds of events. The member-by-member tables are on each basin's page.
+Nov-Feb hindcast at the 15% alert level: about 2.5-5 alerts a winter per basin, right 22-29% of the time against a
+9-13% base rate, catching about half to two-thirds of events. Warm-wet (rain-on-snow) is the weakest in winter
+and strongest in March-April. The member-by-member tables are on each basin's page.
 Truth: PRISM Climate Group, Oregon State University (basin means). Forecast data: NOAA GEFS via dynamical.org;
 ECMWF open data, &copy; ECMWF, CC BY 4.0 (reduced here to basin statistics). Basin boundaries: USGS Watershed
 Boundary Dataset. State outline: US Census via us-atlas.</p>"""
@@ -181,7 +182,7 @@ PSCALE = [(0.01, "T", "#d4d4d8", "#18181b"), (0.1, ".01", "#f7f7b5", "#18181b"),
           (2.0, "1.5", "#3a86c8", "#fff"), (3.0, "2", "#3561c4", "#fff"), (4.0, "3", "#4f3fc6", "#fff"),
           (5.0, "4", "#6d2fb4", "#fff"), (6.0, "5", "#86218f", "#fff"), (8.0, "6", "#6d1659", "#fff"),
           (1e9, "8+", "#450a2c", "#fff")]
-FLAG = {"warm-dry": ("WD", "#ea580c"), "dry": ("D", "#ca8a04"), "cold-wet": ("CW", "#2563eb")}
+FLAG = {"warm-dry": ("WD", "#ea580c"), "dry": ("D", "#ca8a04"), "warm-wet": ("WW", "#db2777"), "cold-wet": ("CW", "#2563eb")}
 
 
 def _pcol(v):
@@ -299,7 +300,7 @@ def plume_section(o, basins=None):
     return (f"<h2>Members, day by day</h2><p class=mut>Running basin-mean precipitation total (inches) from the start, "
             f"one row per member, wettest first by the end of week 2. Week 2 is shaded in the header. Flags mark "
             f"members whose week 2 is in an alarm tail of their own model's climate, and their week-2 cells are "
-            f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>CW</b> cold-wet. Wk-2 P is the member's days 8-14 "
+            f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>WW</b> warm-wet, <b>CW</b> cold-wet. Wk-2 P is the member's days 8-14 "
             f"precipitation (inches) and its percentile in its own model's climate, in the flag colour when flagged; Wk-2 T is its week-2 temperature "
             f"percentile. Flags depend on week 2 only. ECMWF members stop at day 15, so their Total covers 15 days, "
             f"not 21.</p><p class=key>Colour key (in): {key}</p>"
@@ -360,8 +361,11 @@ def trend_section(o, h, basins=None):
                             f"<td class='{'hi' if v >= C.A['alert_odds'] else 'lo'}'>{v:.0%}</td>" for v in vals)
             d = vals[-1] - vals[-2] if len(vals) > 1 else np.nan
             cls, arr = _arrow(d)
-            txt = f"{arr} {abs(d) * 100:.0f}" if cls != "steady" else (f"{d * 100:+.0f}" if round(d * 100) else "0")
-            chg = f"<td class={cls}>{txt}</td>" if np.isfinite(d) else "<td class=na></td>"
+            if np.isfinite(d):                                     # NaN when an event is newer than the history
+                txt = f"{arr} {abs(d) * 100:.0f}" if cls != "steady" else (f"{d * 100:+.0f}" if round(d * 100) else "0")
+                chg = f"<td class={cls}>{txt}</td>"
+            else:
+                chg = "<td class=na></td>"
             lead = f"<th rowspan={len(C.A['events'])}>{html.escape(b['name'])}</th>" if k == 0 else ""
             rows.append(f"<tr>{lead}<th>{EV_LABEL[ev]}</th>{cells}{chg}</tr>")
     mv = moves(h, o["init"])
@@ -428,7 +432,7 @@ def map_section(o, h, up):
     legend = "".join(f"<span style='background:{c}'></span>{t}" for c, t in LEVEL.values()) + \
         "<span style='background:#cbd5e1'></span>coming soon"
     return f"""<h2>Basins</h2>
-<p class=mut>Shaded by the highest week-2 odds among warm-dry, dry and cold-wet. Click a basin for its odds trend and
+<p class=mut>Shaded by the highest week-2 odds among the alerting events. Click a basin for its odds trend and
 member-by-member table. Grey basins are not forecast yet: coming soon.</p>
 <div id=map></div><p class="mut legend">{legend}</p>
 <script>
