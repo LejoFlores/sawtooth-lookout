@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 
+import pandas as pd
 import requests
 
 from . import common as C
@@ -37,9 +38,17 @@ def main():
     open_ = {i["title"]: i for i in s.get(f"{api}/issues", params=dict(labels=LABEL, state="open", per_page=100)).json()
              if "pull_request" not in i}
     page = os.environ.get("EWS_PAGE_URL", "")
+    hist = pd.read_csv(C.PRODUCTS / "history.csv")
+    hist = hist[hist.init < o["init"]].sort_values("init")
     for t, a in want.items():
         b = o["basins"][a["basin"]]["week2"][a["event"]]
-        body = (f"Start {o['init']}: week 2 ({o['week2_dates'][0]} to {o['week2_dates'][1]}) odds **{a['odds']:.0%}** "
+        prev = hist[(hist.basin == a["basin"]) & (hist.event == a["event"])].tail(1)
+        was = ""
+        if len(prev):
+            d = a["odds"] - float(prev.odds.iloc[0])
+            how = "up" if d >= 0.03 else ("down" if d <= -0.03 else "about level")
+            was = f" ({how} from {float(prev.odds.iloc[0]):.0%} in the {prev.init.iloc[0]} run)"
+        body = (f"Start {o['init']}: week 2 ({o['week2_dates'][0]} to {o['week2_dates'][1]}) odds **{a['odds']:.0%}**{was} "
                 f"against a usual {b['base_rate']:.0%}. GEFS member share {b['share_gefs']:.0%}"
                 + ("" if b["share_ecmwf"] is None else f", ECMWF {b['share_ecmwf']:.0%}") + "."
                 + (f"\n\n{page}" if page else "")

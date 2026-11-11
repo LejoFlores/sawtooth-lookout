@@ -63,10 +63,21 @@ def cell(v, alerting, alert_ev):
     return f"<td class='{lvl}' title='{html.escape(tip)}'><b>{odds:.0%}</b><span>vs {base:.0%}</span></td>"
 
 
-def write(o, h):
+def write(o, h, root=True):
+    """Dated page products/YYYYMMDD/index.html always; the root page and figure only when `root` (newest start)."""
     p = C.PRODUCTS
-    figure(o, h, p / f"{o['init'].replace('-', '')}" / "alarms.png")
-    figure(o, h, p / "alarms.png")
+    h = h[h.init <= o["init"]]
+    day = p / o["init"].replace("-", "")
+    day.mkdir(parents=True, exist_ok=True)
+    figure(o, h, day / "alarms.png")
+    if root:
+        figure(o, h, p / "alarms.png")
+    for where, up in ([(day, "../")] + ([(p, "")] if root else [])):
+        (where / "index.html").write_text(render(o, h, up))
+    write_archive(h)
+
+
+def render(o, h, up):
     evs = C.A["events"] + C.A["watch_events"]
     head = "".join(f"<th>{EV_LABEL[e]}{'' if e in C.A['events'] else '<br><small>(watch only)</small>'}</th>" for e in evs)
     rows = "".join(f"<tr><th>{html.escape(b['name'])}</th>" +
@@ -91,10 +102,10 @@ table{{border-collapse:collapse;margin:8px 0 16px;width:100%}} th,td{{border:1px
 th{{font-weight:600}} td b{{display:block;font-size:17px}} td span{{color:var(--mut);font-size:12px}}
 td.hi{{background:var(--hi)}} td.hi b{{color:var(--hib)}} td.mid{{background:var(--mid)}} td.lo{{background:var(--lo)}}
 td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} img{{max-width:100%}}
-.wrap{{overflow-x:auto}} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
+.wrap{{overflow-x:auto}} {TREND_CSS} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
 {PLUME_CSS}
 </style></head><body>
-<h1>Sawtooth Lookout</h1>
+<h1><a href="{up or './'}" style="text-decoration:none">Sawtooth Lookout</a></h1>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>{o['init']}</b> 00 UTC ({sysline}). Week 2 = <b>{o['week2_dates'][0]} to {o['week2_dates'][1]}</b>.</p>
@@ -104,6 +115,7 @@ td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} 
 10%), against the usual rate. Red: at or above the {C.A['alert_odds']:.0%} alert level. Amber: at least 1.5 times the usual
 rate. Hover for each model's raw member share.</p>
 <div class=wrap><table><tr><th>Basin</th>{head}</tr>{rows}</table></div>
+{trend_section(o, h)}
 <img src="alarms.png" alt="Member percentiles and recent odds by basin">
 {plume_section(o)}
 <h2>Days 8-21 (GEFS only, heads-up)</h2>
@@ -120,9 +132,10 @@ ECMWF open data, &copy; ECMWF, CC BY 4.0 (reduced here to basin statistics).</p>
 <p class=mut>&copy; 2026 Lejo Flores and Boise State University. Products licensed
 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; code (Apache 2.0) at
 <a href="https://github.com/LejoFlores/sawtooth-lookout">github.com/LejoFlores/sawtooth-lookout</a>.</p>
-<p class=mut><a href="history.csv">history.csv</a> · <a href="latest.json">latest.json</a></p>
+<p class=mut><a href="{up}archive.html">Past days</a> · <a href="{up}history.csv">history.csv</a> ·
+<a href="{up}latest.json">latest.json</a></p>
 </body></html>"""
-    (p / "index.html").write_text(page)
+    return page
 
 
 # ------------------------------------------------------------------------------------- member plume tables (per basin)
@@ -247,3 +260,87 @@ def plume_section(o):
             f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>CW</b> cold-wet. Wk-2 T is the member's week-2 temperature "
             f"percentile. ECMWF members stop at day 15.</p><p class=key>Colour key (in): {key}</p>"
             f"<p class=basins>{nav}</p>{secs}")
+
+
+# ---------------------------------------------------------------------------------------- how the odds are changing
+TREND_RUNS = 7
+STEP = 0.03          # a change smaller than this (3 points) counts as steady
+
+TREND_CSS = """table.trend td{font-variant-numeric:tabular-nums} td.up{color:var(--hib);font-weight:700}
+td.down{color:#2563eb;font-weight:700} ul.moves li{margin:2px 0}"""
+
+
+def _arrow(d):
+    if not np.isfinite(d) or abs(d) < STEP:
+        return "steady", "–"
+    return ("up", "▲") if d > 0 else ("down", "▼")
+
+
+def moves(h, init):
+    """Plain-language lines for alerting events whose odds crossed the alert level or moved 3 runs in a row."""
+    out = []
+    lvl = C.A["alert_odds"]
+    for (bn, ev), g in h[h.event.isin(C.A["events"])].groupby(["basin", "event"]):
+        g = g.sort_values("init")
+        g = g[g.init <= init].tail(4)
+        if len(g) < 2 or g.init.iloc[-1] != init:
+            continue
+        x = g.odds.to_numpy()
+        name = f"{C.CFG['basins'][bn]}, {EV_LABEL[ev].lower()}"
+        path = " → ".join(f"{v:.0%}" for v in x[-3:])
+        if x[-1] >= lvl > x[-2]:
+            out.append((3, f"<b>{name}</b> crossed the {lvl:.0%} alert level: {path}"))
+        elif x[-2] >= lvl > x[-1]:
+            out.append((2, f"<b>{name}</b> fell below the alert level: {path}"))
+        elif len(x) >= 3 and np.all(np.diff(x[-3:]) >= STEP):
+            out.append((1, f"<b>{name}</b> rising for two runs: {path}"))
+        elif len(x) >= 3 and np.all(np.diff(x[-3:]) <= -STEP) and x[-3] >= lvl / 2:
+            out.append((0, f"<b>{name}</b> falling for two runs: {path}"))
+    return [t for _, t in sorted(out, key=lambda z: -z[0])]
+
+
+def trend_section(o, h):
+    inits = sorted(h.init.unique())[-TREND_RUNS:]
+    if len(inits) < 2:
+        return ("<h2>How the odds are changing</h2><p class=mut>The trend starts with the next run.</p>")
+    hd = "".join(f"<th>{pd.Timestamp(i):%b %-d}</th>" for i in inits)
+    rows = []
+    for bn, b in o["basins"].items():
+        for k, ev in enumerate(C.A["events"]):
+            g = h[(h.basin == bn) & (h.event == ev)].set_index("init").odds
+            vals = [g.get(i, np.nan) for i in inits]
+            cells = "".join("<td class=na>·</td>" if not np.isfinite(v) else
+                            f"<td class='{'hi' if v >= C.A['alert_odds'] else 'lo'}'>{v:.0%}</td>" for v in vals)
+            d = vals[-1] - vals[-2] if len(vals) > 1 else np.nan
+            cls, arr = _arrow(d)
+            txt = f"{arr} {abs(d) * 100:.0f}" if cls != "steady" else f"{d * 100:+.0f}"
+            chg = f"<td class={cls}>{txt}</td>" if np.isfinite(d) else "<td class=na></td>"
+            lead = f"<th rowspan={len(C.A['events'])}>{html.escape(b['name'])}</th>" if k == 0 else ""
+            rows.append(f"<tr>{lead}<th>{EV_LABEL[ev]}</th>{cells}{chg}</tr>")
+    mv = moves(h, o["init"])
+    mvh = ("<ul class=moves>" + "".join(f"<li>{m}</li>" for m in mv) + "</ul>") if mv else \
+        "<p>No alert-level crossings or steady rises in the latest runs.</p>"
+    return (f"<h2>How the odds are changing</h2>{mvh}<p class=mut>Week-2 odds from the last {len(inits)} daily runs. "
+            f"Each run's week 2 is a different week (the window slides a day per run), so this shows whether the "
+            f"forecasts keep pointing at a tail event, not the odds for one fixed week. Change is from the previous "
+            f"run, in percentage points.</p><div class=wrap><table class=trend><tr><th>Basin</th><th>Event</th>{hd}"
+            f"<th>Change</th></tr>{''.join(rows)}</table></div>")
+
+
+def write_archive(h):
+    p = C.PRODUCTS
+    rows = []
+    for init in sorted(h.init.unique(), reverse=True):
+        g = h[(h.init == init) & h.alert.astype(bool)]
+        al = ", ".join(f"{C.CFG['basins'][r.basin]} {EV_LABEL[r.event].lower()} {r.odds:.0%}" for r in g.itertuples())
+        d = init.replace("-", "")
+        link = f"<a href='{d}/'>{init}</a>" if (p / d / "index.html").exists() else init
+        rows.append(f"<tr><td>{link}</td><td style='text-align:left'>{html.escape(al) or 'none'}</td></tr>")
+    (p / "archive.html").write_text(
+        "<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,"
+        "initial-scale=1'><title>Sawtooth Lookout archive</title><style>body{font:15px/1.45 system-ui,sans-serif;"
+        "margin:0 auto;max-width:900px;padding:16px} table{border-collapse:collapse;width:100%} td,th{border:1px "
+        "solid #e2e8f0;padding:6px 8px} @media (prefers-color-scheme:dark){body{background:#0b1220;color:#e2e8f0}"
+        "a{color:#93c5fd} td,th{border-color:#1f2937}}</style></head><body><h1><a href='./'>Sawtooth Lookout</a>"
+        " archive</h1><p><b>Experimental research product. Not an official forecast.</b></p><table><tr><th>Start"
+        "</th><th>Alerts (week-2 odds)</th></tr>" + "".join(rows) + "</table></body></html>")

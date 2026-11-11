@@ -9,7 +9,8 @@
 6. Write products/YYYYMMDD/alarms.json, latest.json, history.csv, index.html; an alert is open while week-2 odds of
    an alerting event are at or above alert_odds in an alerting season (alerts.json; notify.py turns it into issues).
 
-Run (from the repository root): python3 -m ews.run_daily [--init YYYY-MM-DD | latest] [--no-ecmwf]
+Run (from the repository root): python3 -m ews.run_daily [--init YYYY-MM-DD | YYYY-MM-DD..YYYY-MM-DD | latest]
+[--no-ecmwf]. A range backfills past starts oldest first; latest.json and the root page always show the newest start.
 """
 import argparse
 import json
@@ -109,17 +110,11 @@ def history_rows(o):
     return pd.DataFrame(rows)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--init", default="latest")
-    ap.add_argument("--no-ecmwf", action="store_true")
-    args = ap.parse_args()
-    ds = S.gefs_open()
-    t0 = pick_start(ds, args.init)
+def run_one(ds, t0, use_ecmwf):
     print("GEFS start", t0.date(), flush=True)
     gefs = S.gefs_windows(ds, t0, W)
     ec = None
-    if not args.no_ecmwf and S.ecmwf_available(t0):
+    if use_ecmwf and S.ecmwf_available(t0):
         try:
             T, P, _, daily = S.ecmwf_window(t0, *W["week2"])
             ec = (T, P, daily)
@@ -131,7 +126,10 @@ def main():
     d = C.PRODUCTS / f"{t0:%Y%m%d}"
     d.mkdir(exist_ok=True)
     json.dump(o, open(d / "alarms.json", "w"), indent=1)
-    json.dump(o, open(C.PRODUCTS / "latest.json", "w"), indent=1)
+    lp = C.PRODUCTS / "latest.json"
+    newest = not lp.exists() or json.load(open(lp))["init"] <= o["init"]
+    if newest:
+        json.dump(o, open(lp, "w"), indent=1)
     hp = C.PRODUCTS / "history.csv"
     h = history_rows(o)
     if hp.exists():
@@ -139,10 +137,29 @@ def main():
         h = pd.concat([old[old.init != o["init"]], h]).sort_values(["init", "basin", "event"])
     h.to_csv(hp, index=False)
     from . import page
-    page.write(o, h)
+    page.write(o, h, root=newest)
+    if not newest:                                     # backfill: refresh the root page's trend with the new row
+        page.write(json.load(open(lp)), h, root=True)
     for a in o["alerts"]:
         print(f"ALERT {LABEL[a['basin']]}: {a['event']} week 2, odds {a['odds']:.0%}")
     print("alerts:", len(o["alerts"]))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--init", default="latest")
+    ap.add_argument("--no-ecmwf", action="store_true")
+    args = ap.parse_args()
+    ds = S.gefs_open()
+    if ".." in args.init:
+        a, b = args.init.split("..")
+        for t in pd.date_range(a, b, freq="D"):
+            try:
+                run_one(ds, pick_start(ds, str(t.date())), not args.no_ecmwf)
+            except SystemExit as e:
+                print(t.date(), "skipped:", e, flush=True)
+    else:
+        run_one(ds, pick_start(ds, args.init), not args.no_ecmwf)
 
 
 if __name__ == "__main__":

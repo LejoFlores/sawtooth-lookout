@@ -27,6 +27,11 @@ Payette at Lowman, Weiser near Weiser, Boise above Lucky Peak, Big Wood at Haile
 
 Days 8-21 from GEFS alone are shown as a heads-up and never alert.
 
+The page also shows how the odds have moved over the last 7 runs, and it calls out alert-level crossings and steady
+rises. Alert issue comments say how today's odds compare with the previous run. Every day's page is kept under
+`YYYYMMDD/` and listed in `archive.html`. To backfill past starts, run the workflow with mode `backfill` and init
+`YYYY-MM-DD..YYYY-MM-DD`.
+
 ## Skill
 
 Hindcast, Nov-Feb, GEFS+ECMWF reforecasts, 15 winters, leave-one-winter-out calibration (`static/hindcast_scores.csv`):
@@ -47,7 +52,7 @@ Read these as rough guides. Tail events are rare, so the samples are small.
 
 | Path | What |
 |---|---|
-| `ews/run_daily.py` | Daily run: `YYYYMMDD/alarms.json`, `latest.json`, `history.csv`, `index.html` |
+| `ews/run_daily.py` | Daily run: `YYYYMMDD/` (alarms.json, page, figure), `latest.json`, `history.csv`, `index.html`, `archive.html` |
 | `ews/notify.py` | Opens, comments on and closes alert issues |
 | `ews/sources.py` | GEFS (Zarr) and ECMWF open data (GRIB byte ranges) readers |
 | `ews/page.py` | The web page, with Swain-style member tables |
