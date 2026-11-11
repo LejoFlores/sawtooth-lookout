@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "daily, replay or both"
+        description: "daily, replay, both, or backfill (init = YYYY-MM-DD..YYYY-MM-DD; no issues)"
         default: daily
       init:
         description: "Start date (YYYY-MM-DD) or latest"
@@ -65,6 +65,12 @@ jobs:
         if: env.MODE == 'daily' || env.MODE == 'both'
         env:
           INIT: ${{ inputs.init || 'latest' }}
+        run: python -m ews.run_daily --init "$INIT"
+
+      - name: Backfill past starts
+        if: env.MODE == 'backfill'
+        env:
+          INIT: ${{ inputs.init }}
         run: python -m ews.run_daily --init "$INIT"
 
       - name: Alert issues
