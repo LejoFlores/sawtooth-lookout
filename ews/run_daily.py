@@ -14,6 +14,7 @@ Run (from the repository root): python3 -m ews.run_daily [--init YYYY-MM-DD | YY
 """
 import argparse
 import json
+import time
 
 import numpy as np
 import pandas as pd
@@ -115,11 +116,17 @@ def run_one(ds, t0, use_ecmwf):
     gefs = S.gefs_windows(ds, t0, W)
     ec = None
     if use_ecmwf and S.ecmwf_available(t0):
-        try:
-            T, P, _, daily = S.ecmwf_window(t0, *W["week2"])
-            ec = (T, P, daily)
-        except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
-            print("ECMWF download failed:", repr(e)[:300], flush=True)
+        # The S3 mirror throttles (503) bursts of range requests: retry the whole download more gently before
+        # falling back to GEFS only.
+        for attempt, workers in enumerate((8, 3, 1)):
+            try:
+                T, P, _, daily = S.ecmwf_window(t0, *W["week2"], workers=workers)
+                ec = (T, P, daily)
+                break
+            except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
+                print(f"ECMWF download failed ({workers} workers):", repr(e)[:300], flush=True)
+                if attempt < 2:
+                    time.sleep(60)
     print("ECMWF", "yes" if ec is not None else "missing, GEFS only", flush=True)
     o = make(t0, gefs, ec)
     C.PRODUCTS.mkdir(parents=True, exist_ok=True)
