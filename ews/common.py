@@ -13,9 +13,10 @@ PRODUCTS = Path(os.environ.get("EWS_PRODUCTS", HERE / CFG["output"]["products"])
 BASINS = list(CFG["basins"])
 A = CFG["alarms"]
 
-# event -> (statistic, tail). Statistics: P window total, T window mean, WD = zT - z(sqrt P) (warm-dry index).
+# event -> (statistic, tail). Statistics: P window total, T window mean, WD = zT - z(sqrt P) (warm-dry index),
+# WW = zT + z(sqrt P) (warm-wet index; rain-on-snow risk).
 EVENTS = {"dry": ("P", "lo"), "wet": ("P", "hi"), "warm": ("T", "hi"), "cold": ("T", "lo"),
-          "warm-dry": ("WD", "hi"), "cold-wet": ("WD", "lo")}
+          "warm-dry": ("WD", "hi"), "cold-wet": ("WD", "lo"), "warm-wet": ("WW", "hi")}
 
 
 def season(t):
@@ -88,13 +89,14 @@ def zs(x, ref):
 
 def member_percentiles(T, P, rT, rP):
     """Live members T, P [member, basin] ranked within reference rT, rP [n, basin] -> {stat: [member, basin]}."""
-    out = {k: np.full(T.shape, np.nan) for k in ("T", "P", "WD")}
+    out = {k: np.full(T.shape, np.nan) for k in ("T", "P", "WD", "WW")}
     for b in range(T.shape[1]):
         zT, zP = zs(T[:, b], rT[:, b]), zs(np.sqrt(P[:, b]), np.sqrt(rP[:, b]))
         rzT, rzP = zs(rT[:, b], rT[:, b]), zs(np.sqrt(rP[:, b]), np.sqrt(rP[:, b]))
         out["T"][:, b] = pct(T[:, b], rT[:, b])
         out["P"][:, b] = pct(P[:, b], rP[:, b])
         out["WD"][:, b] = pct(zT - zP, rzT - rzP)
+        out["WW"][:, b] = pct(zT + zP, rzT + rzP)
     return out
 
 
