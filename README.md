@@ -89,7 +89,7 @@ Products go to `products/` or to `$EWS_PRODUCTS`.
   statistics. ECMWF does not endorse this product.
 - PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
 - Basin boundaries: USGS Watershed Boundary Dataset (HUC12s upstream of the USGS gauges; HUC8s on the map).
-- State outline: US Census cartographic boundaries via us-atlas. Basemap: © OpenStreetMap contributors, © CARTO.
+- State outline: US Census cartographic boundaries via us-atlas. Basemap: USGS The National Map (USGSTopo).
 
 ## License and citation
 

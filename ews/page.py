@@ -441,8 +441,9 @@ member-by-member table. Grey basins are not forecast yet: coming soon.</p>
   var S = {st}, up = {json.dumps(up)};
   var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([45.0, -114.6], 6);
-  L.tileLayer('https://{{s}}.basemaps.cartocdn.com/' + (dark ? 'dark_all' : 'light_all') + '/{{z}}/{{x}}/{{y}}{{r}}.png',
-    {{maxZoom: 10, attribution: '&copy; OpenStreetMap contributors &copy; CARTO'}}).addTo(m);
+  // USGS National Map: public, no API key. The page works without it if the tiles fail to load.
+  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{{z}}/{{y}}/{{x}}',
+    {{maxZoom: 10, opacity: dark ? 0.75 : 1, attribution: 'Basemap: USGS The National Map'}}).addTo(m);
   function get(u) {{ return fetch(up + u).then(function(r) {{ return r.json(); }}); }}
   Promise.all([get('map/others.geojson'), get('map/idaho.geojson'), get('map/active.geojson')]).then(function(g) {{
     L.geoJSON(g[0], {{style: {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}},
