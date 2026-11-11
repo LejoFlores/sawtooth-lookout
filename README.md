@@ -27,6 +27,8 @@ Payette at Lowman, Weiser near Weiser, Boise above Lucky Peak, Big Wood at Haile
 
 Days 8-21 from GEFS alone are shown as a heads-up and never alert.
 
+The landing page has a map of Idaho with each forecast basin shaded by its alert level; click a basin for its own
+page with the odds trend and the member-by-member table. Other Idaho basins are greyed out (coming soon).
 The page also shows how the odds have moved over the last 7 runs, and it calls out alert-level crossings and steady
 rises. Alert issue comments say how today's odds compare with the previous run. Every day's page is kept under
 `YYYYMMDD/` and listed in `archive.html`. To backfill past starts, run the workflow with mode `backfill` and init
@@ -55,7 +57,9 @@ Read these as rough guides. Tail events are rare, so the samples are small.
 | `ews/run_daily.py` | Daily run: `YYYYMMDD/` (alarms.json, page, figure), `latest.json`, `history.csv`, `index.html`, `archive.html` |
 | `ews/notify.py` | Opens, comments on and closes alert issues |
 | `ews/sources.py` | GEFS (Zarr) and ECMWF open data (GRIB byte ranges) readers |
-| `ews/page.py` | The web page, with Swain-style member tables |
+| `ews/page.py` | The web pages: map landing page, basin pages with Swain-style member tables, archive |
+| `scripts/build_map.py` | Builds the map layers in `static/map/` from USGS WBD and us-atlas |
+| `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause), served with the site |
 | `static/` | Basin polygons, grid weights, reforecast climates, calibration, PRISM basin means |
 | `scripts/replay.py` | Replays past real-time forecasts and scores them against PRISM |
 | `scripts/build_static.py` | Rebuilds `static/` from reforecast basin extracts (not included) |
@@ -78,7 +82,8 @@ Products go to `products/` or to `$EWS_PRODUCTS`.
 - ECMWF open data, © ECMWF, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), reduced here to basin
   statistics. ECMWF does not endorse this product.
 - PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
-- Basin boundaries: USGS Watershed Boundary Dataset (HUC12s upstream of the USGS gauges).
+- Basin boundaries: USGS Watershed Boundary Dataset (HUC12s upstream of the USGS gauges; HUC8s on the map).
+- State outline: US Census cartographic boundaries via us-atlas. Basemap: © OpenStreetMap contributors, © CARTO.
 
 ## License and citation
 

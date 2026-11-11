@@ -67,16 +67,17 @@ def _get(url, session=None, method="get", **kw):
     """HTTP with retries: the S3 mirror answers 503 (slow down) under load."""
     import time
     f = getattr(session or requests, method)
-    for attempt in range(6):
+    import random
+    for attempt in range(8):
         try:
             r = f(url, timeout=120, **kw)
             if r.status_code in (500, 502, 503, 504):
                 raise requests.HTTPError(f"{r.status_code}", response=r)
             return r
         except requests.RequestException:
-            if attempt == 5:
+            if attempt == 7:
                 raise
-            time.sleep(2 ** attempt)
+            time.sleep(min(2 ** attempt, 30) * (0.5 + random.random()))       # jittered backoff, up to ~2 min total
 
 
 def ecmwf_available(t0, step=360):
