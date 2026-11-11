@@ -1,0 +1,21 @@
+Sawtooth Lookout
+Copyright 2026 Lejo Flores and Boise State University
+
+This product includes software developed by Lejo Flores at Boise State University
+(https://github.com/LejoFlores/sawtooth-lookout).
+
+If you use or adapt this software or its forecast products, please cite it as described
+in CITATION.cff.
+
+"Sawtooth Lookout" and "Boise State University" are names of the authors and their
+institution. Under section 6 of the Apache License, this license does not grant
+permission to use them to endorse or promote derived products or forecasts.
+
+Sawtooth Lookout is an experimental research product. It is not an official forecast.
+For official forecasts and warnings, see the National Weather Service (weather.gov).
+
+Third-party data used by this software keep their own terms:
+- ECMWF open data, (c) ECMWF, licensed under CC BY 4.0.
+- NOAA GEFS forecasts and GEFSv12 reforecasts (NOAA, public domain), accessed via
+  data.dynamical.org and the NOAA Open Data Dissemination program.
+- PRISM Climate Group, Oregon State University (https://prism.oregonstate.edu).

@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Sawtooth Lookout or its forecast products, please cite it as below."
+title: "Sawtooth Lookout: week-2 snow-drought early warning for Idaho basins"
+type: software
+authors:
+  - family-names: Flores
+    given-names: Lejo
+    affiliation: Boise State University
+repository-code: "https://github.com/LejoFlores/sawtooth-lookout"
+license: Apache-2.0
+date-released: 2026-11-11
+keywords:
+  - subseasonal forecasting
+  - snow drought
+  - early warning
+  - ensemble forecasts
+  - Idaho
