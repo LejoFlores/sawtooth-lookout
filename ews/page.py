@@ -211,7 +211,7 @@ def plume_table(o, bn):
     body = [stat_row("Mean", np.mean), stat_row("Median", np.median),
             stat_row("% members with 0.1 in+", lambda v: 100 * np.mean(v >= 0.1))]
     for r in rows:
-        alert_ev = [e for e in r["ev"] if e in FLAG]
+        alert_ev = [e for e in FLAG if e in r["ev"]]          # warm-dry colour wins over dry
         chips = "".join(f"<span class=chip style='background:{FLAG[e][1]}'>{FLAG[e][0]}</span>" for e in alert_ev)
         edge = f" style='box-shadow:inset 4px 0 0 {FLAG[alert_ev[0]][1]}'" if alert_ev else ""
         cells = []
@@ -227,7 +227,7 @@ def plume_table(o, bn):
         bg, fg = _pcol(tot)
         c = r["cum"]
         wk = c[min(w1, len(c)) - 1] - (c[w0 - 2] if w0 >= 2 else 0.0)                   # week-2 total (in)
-        wbg, wfg = _pcol(wk)
+        wbg, wfg = (FLAG[alert_ev[0]][1], "#fff") if alert_ev else _pcol(wk)              # flagged: the flag colour
         rows_html = (f"<tr><th{edge}>{r['sys'].upper()} {r['k'] + 1}</th>"
                      f"<td style='background:{wbg};color:{wfg}'><b>{_fmt(wk) or '0'}</b><br><small style='color:inherit;opacity:.85'>{r['P']:.0%}</small></td>"
                      f"<td style='background:{_tcol(r['T'])}'>{r['T']:.0%}</td>"
@@ -263,7 +263,7 @@ def plume_section(o):
             f"one row per member, wettest first by the end of week 2. Week 2 is shaded in the header. Flags mark "
             f"members whose week 2 is in an alarm tail of their own model's climate, and their week-2 cells are "
             f"outlined: <b>WD</b> warm-dry, <b>D</b> dry, <b>CW</b> cold-wet. Wk-2 P is the member's days 8-14 "
-            f"precipitation (inches) and its percentile in its own model's climate; Wk-2 T is its week-2 temperature "
+            f"precipitation (inches) and its percentile in its own model's climate, in the flag colour when flagged; Wk-2 T is its week-2 temperature "
             f"percentile. Flags depend on week 2 only. ECMWF members stop at day 15, so their Total covers 15 days, "
             f"not 21.</p><p class=key>Colour key (in): {key}</p>"
             f"<p class=basins>{nav}</p>{secs}")
