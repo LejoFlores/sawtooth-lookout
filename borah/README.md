@@ -54,3 +54,12 @@ can also run in a cloud session. Borah is the home for the full archive and for 
 
 The ECMWF reforecast is CC BY 4.0 (ECMWF), via Planette's copy. Products built on it must carry that attribution, as
 the live site already does.
+
+## Same thing on GitHub's runners
+
+`.github/workflows/reforecast-means.yml` runs the extraction and the basin averaging in 28 parallel shards on GitHub's
+runners, then commits only the basin means to the `reforecast-means` branch (`idaho_huc8/{gefs,ecmwf}/YYYYMMDD.npz`).
+It is set up for the 89 screened Idaho HUC8s (`borah/polygons/idaho_huc8.gpkg`; geometry simplified to 50 m, which
+changes basin areas by under 0.03%). It runs when a commit pushed to a `claude/**` branch has `[refc]` in its message,
+or by hand from the Actions tab once the workflow is on main. To use other polygons, change `POLYGONS`, `ID`, `KEEP`
+and `NAME` in the workflow.
