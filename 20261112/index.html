@@ -1,0 +1,87 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1"><title>Sawtooth Lookout</title>
+<link rel=stylesheet href='../vendor/leaflet/leaflet.css'><script src='../vendor/leaflet/leaflet.js'></script><style>
+:root{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}
+table{border-collapse:collapse;margin:8px 0 16px;width:100%} th,td{border:1px solid var(--line);padding:6px 8px;text-align:center}
+th{font-weight:600} td b{display:block;font-size:17px} td span{color:var(--mut);font-size:12px}
+td.hi{background:var(--hi)} td.hi b{color:var(--hib)} td.mid{background:var(--mid)} td.lo{background:var(--lo)}
+td.muted{opacity:.6} .mut,small{color:var(--mut)} .warn{color:var(--hib)} img{max-width:100%}
+.wrap{overflow-x:auto} table.trend td{font-variant-numeric:tabular-nums} td.up{color:var(--hib);font-weight:700}
+td.down{color:#2563eb;font-weight:700} ul.moves li{margin:2px 0} .disc{border:1px solid var(--hib);border-radius:6px;padding:8px 10px} a{color:inherit}
+
+table.plume{width:auto;font:12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}
+table.plume th,table.plume td{padding:2px 6px;min-width:34px;white-space:nowrap}
+table.plume th.w2{background:var(--mid)} table.plume tr.sum th,table.plume td.stat{background:var(--lo);font-weight:600}
+table.plume td.na{background:var(--bg)} .chip{display:inline-block;border-radius:3px;color:#fff;font-size:10px;
+padding:0 4px;margin-right:2px;font-weight:700} .key span{display:inline-block;padding:1px 6px;font:11px ui-monospace,monospace}
+.basins a{margin-right:12px}
+
+#map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
+.legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
+.leaflet-tooltip{font:13px/1.35 system-ui,sans-serif}
+
+</style></head><body>
+<h1><a href="../" style="text-decoration:none">Sawtooth Lookout</a></h1>
+<p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
+<p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
+<p>Start <b>2026-11-12</b> 00 UTC (GEFS 31 members, ECMWF 50 members). Week 2 = <b>2026-11-19 to 2026-11-25</b>.</p>
+<h2>Alerts</h2><ul><li><a href='basin/weiser_nr_weiser.html'><b>Weiser near Weiser</b></a>: Warm-dry (snow eater) week 2, odds 20%</li></ul>
+<h2>Basins</h2>
+<p class=mut>Shaded by the highest week-2 odds among the alerting events. Click a basin for its odds trend and
+member-by-member table. Grey basins are not forecast yet: coming soon.</p>
+<div id=map></div><p class="mut legend"><span style='background:#dc2626'></span>at or above the alert level<span style='background:#f59e0b'></span>elevated (1.5x usual or more)<span style='background:#0f766e'></span>near normal<span style='background:#cbd5e1'></span>coming soon</p>
+<script>
+(function(){
+  if (!window.L) return;
+  var S = {"sf_payette_lowman": {"level": "lo", "color": "#0f766e", "name": "SF Payette at Lowman", "lines": ["Warm-dry (snow eater): 5%", "Dry: 4% \u25bc", "Warm-wet (rain-on-snow): 6%", "Cold-wet: 3%"]}, "weiser_nr_weiser": {"level": "hi", "color": "#dc2626", "name": "Weiser near Weiser", "lines": ["Warm-dry (snow eater): 20% \u25bc", "Dry: 11% \u25bc", "Warm-wet (rain-on-snow): 12% \u25b2", "Cold-wet: 3%"]}, "boise_nr_boise": {"level": "lo", "color": "#0f766e", "name": "Boise above Lucky Peak", "lines": ["Warm-dry (snow eater): 5% \u25bc", "Dry: 3% \u25bc", "Warm-wet (rain-on-snow): 6%", "Cold-wet: 3%"]}, "big_wood_hailey": {"level": "lo", "color": "#0f766e", "name": "Big Wood at Hailey", "lines": ["Warm-dry (snow eater): 5%", "Dry: 2%", "Warm-wet (rain-on-snow): 12%", "Cold-wet: 3%"]}, "snake_heise": {"level": "lo", "color": "#0f766e", "name": "Snake above Heise", "lines": ["Warm-dry (snow eater): 11% \u25b2", "Dry: 5%", "Warm-wet (rain-on-snow): 10%", "Cold-wet: 3%"]}}, up = "../";
+  var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  var m = L.map('map', {scrollWheelZoom: false, zoomSnap: 0.25}).setView([45.0, -114.6], 6);
+  // USGS National Map: public, no API key. The page works without it if the tiles fail to load.
+  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
+    {maxZoom: 10, opacity: dark ? 0.75 : 1, attribution: 'Basemap: USGS The National Map'}).addTo(m);
+  function get(u) { return fetch(up + u).then(function(r) { return r.json(); }); }
+  Promise.all([get('map/others.geojson'), get('map/idaho.geojson'), get('map/active.geojson')]).then(function(g) {
+    L.geoJSON(g[0], {style: {color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'},
+      onEachFeature: function(f, l) { l.bindTooltip('<b>' + f.properties.name + '</b><br>Coming soon', {sticky: true}); }
+    }).addTo(m);
+    L.geoJSON(g[1], {style: {color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}, interactive: false}).addTo(m);
+    var act = L.geoJSON(g[2], {
+      style: function(f) { var s = S[f.properties.basin]; return {color: '#0f172a', weight: 1.5, fillColor: s.color, fillOpacity: 0.55}; },
+      onEachFeature: function(f, l) {
+        var s = S[f.properties.basin];
+        l.bindTooltip('<b>' + s.name + '</b><br>' + s.lines.join('<br>') + '<br><i>Click for details</i>', {sticky: true});
+        l.on('click', function() { location.href = 'basin/' + f.properties.basin + '.html'; });
+        l.on('mouseover', function() { l.setStyle({weight: 3}); });
+        l.on('mouseout', function() { l.setStyle({weight: 1.5}); });
+      }
+    }).addTo(m);
+    m.fitBounds(L.geoJSON(g[1]).getBounds(), {padding: [4, 4]});
+  });
+})();
+</script><p><a href='../west/'>West-wide map: the same signals on large river subregions &rarr;</a></p>
+<h2>Week-2 odds</h2>
+<p class=mut>Calibrated odds that the week ends in the tail of basin climate (driest, warm-and-driest or cold-and-wettest 10%), against the usual rate. Red: at or above the 15% alert level. Amber: at least 1.5 times the usual rate. Hover for each model's raw member share.</p>
+<div class=wrap><table><tr><th>Basin</th><th>Warm-dry (snow eater)</th><th>Dry</th><th>Warm-wet (rain-on-snow)</th><th>Cold-wet</th><th>Wet<br><small>(watch only)</small></th><th>Warm<br><small>(watch only)</small></th><th>Cold<br><small>(watch only)</small></th></tr><tr><th><a href='basin/sf_payette_lowman.html'>SF Payette at Lowman</a></th><td class='lo' title='GEFS share 0%, ECMWF share 10%'><b>5%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 8%'><b>4%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 3%, ECMWF share 4%'><b>6%</b><span>vs 11%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 2%'><b>3%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 6%'><b>8%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 2%'><b>5%</b><span>vs 10%</span></td><td class='lo muted' title='GEFS share 0%, ECMWF share 0%'><b>2%</b><span>vs 11%</span></td></tr><tr><th><a href='basin/weiser_nr_weiser.html'>Weiser near Weiser</a></th><td class='hi' title='GEFS share 3%, ECMWF share 48%'><b>20%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 10%, ECMWF share 16%'><b>11%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 10%, ECMWF share 10%'><b>12%</b><span>vs 11%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 0%'><b>3%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 6%, ECMWF share 4%'><b>8%</b><span>vs 13%</span></td><td class='hi muted' title='GEFS share 10%, ECMWF share 24%'><b>16%</b><span>vs 10%</span></td><td class='lo muted' title='GEFS share 0%, ECMWF share 0%'><b>2%</b><span>vs 11%</span></td></tr><tr><th><a href='basin/boise_nr_boise.html'>Boise above Lucky Peak</a></th><td class='lo' title='GEFS share 0%, ECMWF share 10%'><b>5%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 6%'><b>3%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 3%, ECMWF share 4%'><b>6%</b><span>vs 11%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 2%'><b>3%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 6%'><b>8%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 2%'><b>5%</b><span>vs 10%</span></td><td class='lo muted' title='GEFS share 0%, ECMWF share 0%'><b>2%</b><span>vs 11%</span></td></tr><tr><th><a href='basin/big_wood_hailey.html'>Big Wood at Hailey</a></th><td class='lo' title='GEFS share 0%, ECMWF share 10%'><b>5%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 4%'><b>2%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 13%, ECMWF share 8%'><b>12%</b><span>vs 11%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 2%'><b>3%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 6%, ECMWF share 6%'><b>9%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 10%'><b>9%</b><span>vs 10%</span></td><td class='lo muted' title='GEFS share 3%, ECMWF share 0%'><b>2%</b><span>vs 11%</span></td></tr><tr><th><a href='basin/snake_heise.html'>Snake above Heise</a></th><td class='lo' title='GEFS share 0%, ECMWF share 26%'><b>11%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 10%'><b>5%</b><span>vs 9%</span></td><td class='lo' title='GEFS share 6%, ECMWF share 8%'><b>10%</b><span>vs 11%</span></td><td class='lo' title='GEFS share 0%, ECMWF share 2%'><b>3%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 6%, ECMWF share 4%'><b>8%</b><span>vs 13%</span></td><td class='lo muted' title='GEFS share 6%, ECMWF share 16%'><b>13%</b><span>vs 10%</span></td><td class='lo muted' title='GEFS share 0%, ECMWF share 0%'><b>2%</b><span>vs 11%</span></td></tr></table></div>
+<h2>How the odds are changing</h2><ul class=moves><li><b>Weiser near Weiser, dry</b> fell below the alert level: 18% → 11%</li></ul><p class=mut>Week-2 odds from the last 2 daily runs. Each run's week 2 is a different week (the window slides a day per run), so this shows whether the forecasts keep pointing at a tail event, not the odds for one fixed week. Change is from the previous run, in percentage points.</p><div class=wrap><table class=trend><tr><th>Basin</th><th>Event</th><th>Nov 10</th><th>Nov 12</th><th>Change</th></tr><tr><th rowspan=4>SF Payette at Lowman</th><th>Warm-dry (snow eater)</th><td class='lo'>4%</td><td class='lo'>5%</td><td class=steady>+1</td></tr><tr><th>Dry</th><td class='lo'>10%</td><td class='lo'>4%</td><td class=down>▼ 6</td></tr><tr><th>Warm-wet (rain-on-snow)</th><td class='lo'>5%</td><td class='lo'>6%</td><td class=steady>+1</td></tr><tr><th>Cold-wet</th><td class='lo'>3%</td><td class='lo'>3%</td><td class=steady>0</td></tr><tr><th rowspan=4>Weiser near Weiser</th><th>Warm-dry (snow eater)</th><td class='hi'>28%</td><td class='hi'>20%</td><td class=down>▼ 8</td></tr><tr><th>Dry</th><td class='hi'>18%</td><td class='lo'>11%</td><td class=down>▼ 8</td></tr><tr><th>Warm-wet (rain-on-snow)</th><td class='lo'>6%</td><td class='lo'>12%</td><td class=up>▲ 5</td></tr><tr><th>Cold-wet</th><td class='lo'>3%</td><td class='lo'>3%</td><td class=steady>0</td></tr><tr><th rowspan=4>Boise above Lucky Peak</th><th>Warm-dry (snow eater)</th><td class='lo'>9%</td><td class='lo'>5%</td><td class=down>▼ 4</td></tr><tr><th>Dry</th><td class='lo'>8%</td><td class='lo'>3%</td><td class=down>▼ 5</td></tr><tr><th>Warm-wet (rain-on-snow)</th><td class='lo'>5%</td><td class='lo'>6%</td><td class=steady>+1</td></tr><tr><th>Cold-wet</th><td class='lo'>3%</td><td class='lo'>3%</td><td class=steady>0</td></tr><tr><th rowspan=4>Big Wood at Hailey</th><th>Warm-dry (snow eater)</th><td class='lo'>2%</td><td class='lo'>5%</td><td class=steady>+3</td></tr><tr><th>Dry</th><td class='lo'>3%</td><td class='lo'>2%</td><td class=steady>-1</td></tr><tr><th>Warm-wet (rain-on-snow)</th><td class='lo'>11%</td><td class='lo'>12%</td><td class=steady>+1</td></tr><tr><th>Cold-wet</th><td class='lo'>3%</td><td class='lo'>3%</td><td class=steady>0</td></tr><tr><th rowspan=4>Snake above Heise</th><th>Warm-dry (snow eater)</th><td class='lo'>4%</td><td class='lo'>11%</td><td class=up>▲ 7</td></tr><tr><th>Dry</th><td class='lo'>2%</td><td class='lo'>5%</td><td class=steady>+3</td></tr><tr><th>Warm-wet (rain-on-snow)</th><td class='lo'>9%</td><td class='lo'>10%</td><td class=steady>0</td></tr><tr><th>Cold-wet</th><td class='lo'>3%</td><td class='lo'>3%</td><td class=steady>0</td></tr></table></div>
+<img src="alarms.png" alt="Member percentiles and recent odds by basin">
+<h2>Days 8-21 (GEFS only, heads-up)</h2>
+<p class=mut>ECMWF open data stops at day 15, so the fortnight uses GEFS alone. Its hindcast skill is lower; it never alerts.</p>
+<div class=wrap><table><tr><th>Basin</th><th>Warm-dry (snow eater)</th><th>Dry</th><th>Warm-wet (rain-on-snow)</th><th>Cold-wet</th></tr><tr><th>SF Payette at Lowman</th><td>6%</td><td>8%</td><td>19%</td><td>6%</td></tr><tr><th>Weiser near Weiser</th><td>8%</td><td>5%</td><td>27%</td><td>6%</td></tr><tr><th>Boise above Lucky Peak</th><td>6%</td><td>4%</td><td>24%</td><td>6%</td></tr><tr><th>Big Wood at Hailey</th><td>6%</td><td>4%</td><td>22%</td><td>6%</td></tr><tr><th>Snake above Heise</th><td>8%</td><td>4%</td><td>22%</td><td>6%</td></tr></table></div>
+<h2>How this works</h2>
+<p class=mut>Each member's basin-mean week-2 temperature and precipitation is ranked within its own model's reforecast
+climate (GEFSv12 2000-2019, ECMWF 2006-2025, starts within 21 days of the date). The share of members in the tail,
+GEFS and ECMWF half each, is turned into odds with a logistic fit to the 2000-2025 hindcast for the season.
+Nov-Feb hindcast at the 15% alert level: about 2.5-5 alerts a winter per basin, right 22-29% of the time against a
+9-13% base rate, catching about half to two-thirds of events. Warm-wet (rain-on-snow) is the weakest in winter
+and strongest in March-April. The member-by-member tables are on each basin's page.
+Truth: PRISM Climate Group, Oregon State University (basin means). Forecast data: NOAA GEFS via dynamical.org;
+ECMWF open data, &copy; ECMWF, CC BY 4.0 (reduced here to basin statistics). Basin boundaries: USGS Watershed
+Boundary Dataset. State outline: US Census via us-atlas.</p>
+<p class=mut>&copy; 2026 Lejo Flores and Boise State University. Products licensed
+<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; code (Apache 2.0) at
+<a href="https://github.com/LejoFlores/sawtooth-lookout">github.com/LejoFlores/sawtooth-lookout</a>.</p>
+<p class=mut><a href="../archive.html">Past days</a> · <a href="../history.csv">history.csv</a> ·
+<a href="../latest.json">latest.json</a></p>
+</body></html>
