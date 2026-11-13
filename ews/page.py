@@ -153,8 +153,10 @@ def render(o, h, up):
     alerts = ("<ul>" + "".join(f"<li><a href='basin/{a['basin']}.html'><b>{html.escape(C.CFG['basins'][a['basin']])}</b></a>: "
                                f"{EV_LABEL[a['event']]} week 2, odds {a['odds']:.0%}</li>" for a in o["alerts"]) + "</ul>") \
         if o["alerts"] else "<p>No alerts.</p>"
+    west = (f"<p><a href='{up}west/'>West-wide map: the same signals on large river subregions &rarr;</a></p>"
+            if (C.STATIC / "west_calibration.csv").exists() else "")
     body = f"""<h2>Alerts</h2>{alerts}
-{map_section(o, h, up)}
+{map_section(o, h, up)}{west}
 <h2>Week-2 odds</h2>
 {ODDS_NOTE.format(lvl=C.A['alert_odds'])}
 {odds_table(o, list(o['basins']))}

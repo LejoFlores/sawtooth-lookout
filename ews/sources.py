@@ -33,9 +33,10 @@ def gefs_complete(ds, t0, day):
     return bool(np.isfinite(v.load().values))
 
 
-def gefs_windows(ds, t0, windows):
-    """-> {window: (T[member, basin], P[member, basin])} for windows {name: (a, b)}."""
-    lat, lon, _ = C.load_weights("gefs")
+def gefs_windows(ds, t0, windows, wname="gefs"):
+    """-> {window: (T[member, basin], P[member, basin])} for windows {name: (a, b)}, for the units of the static
+    weight set `wname` ("gefs" = the Idaho basins, "west_gefs" = the West-wide HUC4 units)."""
+    lat, lon, _ = C.load_weights(wname)
     sub = ds.sel(init_time=t0, latitude=slice(lat.max() + 0.01, lat.min() - 0.01),
                  longitude=slice(lon.min() - 0.01, lon.max() + 0.01))
     bmax = max(b for _, b in windows.values())
@@ -43,8 +44,8 @@ def gefs_windows(ds, t0, windows):
     T = sub.temperature_2m.load()
     P = sub.precipitation_surface.load()
     lh = (T.lead_time.values / np.timedelta64(1, "h")).astype(float)
-    Tb = C.basin_mean(T.values, T.latitude.values, T.longitude.values, "gefs")           # [member, lead, basin]
-    Pb = C.basin_mean(P.values, P.latitude.values, P.longitude.values, "gefs")
+    Tb = C.basin_mean(T.values, T.latitude.values, T.longitude.values, wname)           # [member, lead, basin]
+    Pb = C.basin_mean(P.values, P.latitude.values, P.longitude.values, wname)
     amt = Pb * np.diff(lh, prepend=0.0)[None, :, None] * 3600.0                           # rate over the step -> mm
     out = {}
     for wn, (a, b) in windows.items():
@@ -98,8 +99,13 @@ def _fetch(t0, step, entry, session):
     return r.content
 
 
+# Weight sets every ECMWF message is reduced with, concatenated along the unit axis: the Idaho basins first, then
+# the West-wide HUC4 units when their static files exist (one download serves both).
+ECMWF_SETS = ["ecmwf"] + (["west_ecmwf"] if (C.STATIC / "weights_west_ecmwf.npz").exists() else [])
+
+
 def _decode_basins(buf):
-    """One GRIB message on the global 0.25 deg grid -> (member number, basin means at the 1.5 deg sampling nodes)."""
+    """One GRIB message on the global 0.25 deg grid -> (member number, unit means at the 1.5 deg sampling nodes)."""
     import eccodes
     h = eccodes.codes_new_from_message(buf)
     try:
@@ -113,12 +119,13 @@ def _decode_basins(buf):
     finally:
         eccodes.codes_release(h)
     lat, lon = np.linspace(la0, la1, nj), lo0 + di * np.arange(ni)
-    return int(num), C.basin_mean(v, lat, lon, "ecmwf")
+    return int(num), np.concatenate([C.basin_mean(v, lat, lon, w) for w in ECMWF_SETS])
 
 
 def ecmwf_window(t0, a, b, workers=8):
     """ECMWF ENS open data for window days a..b (b <= 15) ->
-    (T[member, basin], P[member, basin], members, daily_P[member, day 1-15, basin] in mm)."""
+    (T[member, unit], P[member, unit], members, daily_P[member, day 1-15, unit] in mm). Units are the Idaho basins
+    followed by the West-wide HUC4 units (see ECMWF_SETS)."""
     assert b <= 15
     tsteps = list(range(24 * (a - 1) + 6, 24 * b + 1, 6))
     jobs = [(s, e) for s in tsteps for e in _index(t0, s, "2t")]
@@ -137,7 +144,7 @@ def ecmwf_window(t0, a, b, workers=8):
         res = list(ex.map(one, jobs))
     members = sorted({r[2] for r in res})
     mi = {m: i for i, m in enumerate(members)}
-    nb = len(C.BASINS)
+    nb = len(res[0][3])
     T = np.full((len(members), len(tsteps), nb), np.nan)
     tp = np.zeros((len(members), len(psteps) + 1, nb))                                  # index k = step 24k
     for param, s, num, vals in res:
