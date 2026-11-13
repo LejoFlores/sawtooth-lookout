@@ -60,6 +60,7 @@ the live site already does.
 `.github/workflows/reforecast-means.yml` runs the extraction and the basin averaging in 28 parallel shards on GitHub's
 runners, then commits only the basin means to the `reforecast-means` branch (`idaho_huc8/{gefs,ecmwf}/YYYYMMDD.npz`).
 It is set up for the 89 screened Idaho HUC8s (`borah/polygons/idaho_huc8.gpkg`; geometry simplified to 50 m, which
-changes basin areas by under 0.03%). It runs when a commit pushed to a `claude/**` branch has `[refc]` in its message,
+changes basin areas by under 0.03%). `.github/workflows/prism-means.yml` does the same for PRISM daily truth (`borah/prism_means.py`, one shard per water year), writing `idaho_huc8/prism_basin_daily.csv` with `[prism]` in the commit message instead.
+The reforecast workflow runs when a commit pushed to a `claude/**` branch has `[refc]` in its message,
 or by hand from the Actions tab once the workflow is on main. To use other polygons, change `POLYGONS`, `ID`, `KEEP`
 and `NAME` in the workflow.
