@@ -4,8 +4,10 @@ Source: the PRISM web service, services.nacse.org/prism/data/get/us/4km/<var>/<Y
 read in memory. Four requests at a time. PRISM day D is the 24 h ending 12 UTC on D. As in static/prism_basin_daily.csv,
 the output's date is the calendar day D - 1, the day most of that 24 h falls on.
 Weights: the area overlap of each PRISM cell with each polygon (polygon_means.weights), on the cells around the polygons.
+PRISM covers only the US, so HUC8s reaching into Canada are averaged over their US part: prism_cover is the share of
+the polygon's area with data (1 for most), and polygon-days below MIN_COVER are left out.
 
-Output: OUT/prism_WYyyyy.csv with columns date, basin, tmean_C, ppt_mm, one file per water year (October-September).
+Output: OUT/prism_WYyyyy.csv with columns date, basin, tmean_C, ppt_mm, prism_cover, one file per water year (October-September).
 A water year whose file exists is skipped. Days PRISM can't serve (for example in the future) are left out.
 Usage: python prism_means.py --polygons P.gpkg [--layer L] --id ID [--keep K.csv] --out OUT [--wy 2000-2026]
 """
@@ -28,6 +30,7 @@ URL = "https://services.nacse.org/prism/data/get/us/4km/{var}/{d:%Y%m%d}"
 RES = 1 / 24
 LAT0, LON0 = 49.9375 - RES / 2, -125.0208333 + RES / 2      # centre of the upper-left PRISM cell
 SESSION = requests.Session()
+MIN_COVER = 0.5      # a polygon-day needs PRISM data on at least half its area
 
 
 def fetch(var, d):
@@ -85,18 +88,21 @@ def main():
                 jx = np.where((lon > x0 - 2 * RES) & (lon < x1 + 2 * RES))[0]
                 sub = np.ix_(jy, jx)
                 W = PM.weights(g, lat[jy], lon[jx])
-                used = (W > 0).any(0)
             tv, pv = t[sub].reshape(-1), p[sub].reshape(-1)
-            if (tv[used] < -9000).any() or (pv[used] < -9000).any():
-                print(d.date(), "no-data cell inside a polygon, day skipped", flush=True)
-                continue
-            for b, tt, pp in zip(ids, W @ tv, W @ pv):
-                rows.append((d.date(), b, round(float(tt), 3), round(float(pp), 3)))
-        df = pd.DataFrame(rows, columns=["date", "basin", "tmean_C", "ppt_mm"])
+            ok = ((tv > -9000) & (pv > -9000)).astype("f4")
+            cov = W @ ok                       # share of each polygon's area with PRISM data (it stops at the border)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                tm, pm = (W @ (np.where(ok > 0, tv, 0) )) / cov, (W @ (np.where(ok > 0, pv, 0))) / cov
+            for b, tt, pp, cc in zip(ids, tm, pm, cov):
+                if cc >= MIN_COVER:
+                    rows.append((d.date(), b, round(float(tt), 3), round(float(pp), 3), round(float(cc), 3)))
+        df = pd.DataFrame(rows, columns=["date", "basin", "tmean_C", "ppt_mm", "prism_cover"])
         tmp = f.with_suffix(".tmp")
         df.to_csv(tmp, index=False)
         tmp.rename(f)
-        print(f"WY{wy}: {df.date.nunique()} of {len(days)} days, {time.time() - t1:.0f}s", flush=True)
+        print(f"WY{wy}: {df.date.nunique()} of {len(days)} days, {df.basin.nunique()} basins, {time.time() - t1:.0f}s", flush=True)
+        if df.empty and days:
+            sys.exit(f"WY{wy}: no rows written")
 
 
 if __name__ == "__main__":

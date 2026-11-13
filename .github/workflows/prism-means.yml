@@ -65,6 +65,7 @@ jobs:
           fs=$(ls shards/*/prism_WY*.csv | sort -t Y -k2 -n)     # water-year order; rows inside are date-sorted
           head -n 1 $(echo "$fs" | head -n 1) > "$out"
           for f in $fs; do tail -n +2 "$f" >> "$out"; done
+          [ "$(wc -l < "$out")" -gt 1000 ] || { echo "joined file has almost no rows"; exit 1; }
           echo "$(echo "$fs" | wc -l) water years, $(($(wc -l < "$out") - 1)) rows -> $out"
           cd ../means
           git add -A && git commit -qm "PRISM basin means for $NAME (run ${{ github.run_id }})" && git push origin reforecast-means
