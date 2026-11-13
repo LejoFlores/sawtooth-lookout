@@ -4,10 +4,10 @@
 # Optional: LAYER (gpkg layer), KEEP (csv of ids to keep, in order), SYSTEMS (default "gefs", or "gefs ecmwf").
 # Output: $REFC_ROOT/basin-means/$NAME/{gefs,ecmwf}/YYYYMMDD.npz  (copy that folder back to the project to use it)
 #SBATCH -J refc-poly
-#SBATCH -p bsudfq
+#SBATCH -p short
 #SBATCH -c 2
-#SBATCH --mem=16G
-#SBATCH -t 04:00:00
+#SBATCH --mem=4G
+#SBATCH -t 01:00:00
 #SBATCH -o logs/%x-%j.out
 source ./env.sh
 for s in ${SYSTEMS:-gefs}; do

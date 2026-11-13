@@ -25,7 +25,7 @@ can also run in a cloud session. Borah is the home for the full archive and for 
    (`logs/refc-probe-<jobid>.out`) ends with a VERDICT line saying which route to use. It also grids one test start
    if the compute node reaches AWS.
 3. **GEFS archive, either route:**
-   - **Route A, compute nodes reach AWS:** `sbatch gefs_grid.slurm`. This runs 50 array tasks, at most 10 at once.
+   - **Route A, compute nodes reach AWS:** `sbatch gefs_grid.slurm`. This runs 50 small array tasks in the `short` partition (2 CPUs, 3 GB, ~5-15 min each), at most 5 at once, so it stays out of the way of other queued work.
    - **Route B, they don't:** `nohup bash run_offline.sh > logs/offline.log 2>&1 &` on the login node. The login
      node only downloads, in batches of 20 starts. Compute-node jobs (`grid_raw.slurm`) decode each batch and delete
      its raw GRIB, so at most about 50 GB of raw files sit in `$REFC_RAW` at once.
