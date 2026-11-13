@@ -112,8 +112,8 @@ def truth(w):
     return T, P.shift(-1)                                     # CPC labels the 12Z-12Z day by its end date
 
 
-def hindcast(raw, To, Po, names):
-    cg, ce = C.load_climate("west_gefs"), C.load_climate("west_ecmwf")
+def hindcast(raw, To, Po, names, prefix="west"):
+    cg, ce = C.load_climate(f"{prefix}_gefs"), C.load_climate(f"{prefix}_ecmwf")
     est = pd.DatetimeIndex(sorted(raw))
     rows = []
     for i, t0 in enumerate(pd.DatetimeIndex(cg["starts"])):
@@ -144,7 +144,7 @@ def hindcast(raw, To, Po, names):
     return pd.concat(rows, ignore_index=True)
 
 
-def calibrate(R):
+def calibrate(R, prefix="west"):
     cal, sc = [], []
     for (prod, se), g in R.groupby(["product", "season"]):
         for ev in C.EVENTS:
@@ -166,9 +166,9 @@ def calibrate(R):
                 sc.append(dict(base, huc4=h, n=len(k), base_rate=o[k].mean(), roc=auc(share[k], o[k]),
                                bss_calibrated=np.nan, alert_right=o[k][al[k]].mean() if al[k].any() else np.nan,
                                events_caught=al[k][o[k] == 1].mean() if (o[k] == 1).any() else np.nan))
-    pd.DataFrame(cal).round(4).to_csv(C.STATIC / "west_calibration.csv", index=False)
+    pd.DataFrame(cal).round(4).to_csv(C.STATIC / f"{prefix}_calibration.csv", index=False)
     S = pd.DataFrame(sc).round(3)
-    S.to_csv(C.STATIC / "west_scores.csv", index=False)
+    S.to_csv(C.STATIC / f"{prefix}_scores.csv", index=False)
     return S
 
 

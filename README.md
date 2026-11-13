@@ -31,8 +31,11 @@ Days 8-21 from GEFS alone are shown as a heads-up and never alert.
 The landing page has a map of Idaho with each forecast basin shaded by its alert level; click a basin for its own
 page with the odds trend and the member-by-member table. Sixty other water-supply HUC8 basins
 (those above NRCS water supply forecast points, with SNOTEL sites; `scripts/build_huc8.py`) are shaded by their odds
-on hover. They are experimental: they have no verification of their own yet, borrow the calibration of the five
-basins, and open no alerts. The remaining Idaho HUC8s are greyed out.
+on hover. They are experimental and open no alerts. Their odds are calibrated, pooled over the HUC8s, against PRISM
+basin means, and the hover shows each basin's past detection skill (ROC area; `static/huc8_scores.csv`). In the
+Nov-Feb hindcast the pooled week-2 ROC is 0.80 warm-dry, 0.78 dry, 0.77 cold-wet and 0.71 warm-wet. Two HUC8s mostly
+in Canada (17010104, 17010105) have no PRISM truth and use the pooled calibration without a skill figure; three
+(17010101, 17010103, 17010216) are scored on their US part only. The remaining Idaho HUC8s are greyed out.
 The page also shows how the odds have moved over the last 7 runs, and it calls out alert-level crossings and steady
 rises. Alert issue comments say how today's odds compare with the previous run. Every day's page is kept under
 `YYYYMMDD/` and listed in `archive.html`. To backfill past starts, run the workflow with mode `backfill` and init
