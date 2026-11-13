@@ -19,35 +19,41 @@ W2 = tuple(C.A["week2"])
 HI = 0.25                                   # map shading: odds at or above this are the top class
 
 
-def enabled():
-    return all((C.STATIC / f).exists() for f in ("weights_west_gefs.npz", "clim_west_gefs.npz", "west_calibration.csv"))
+# Unit sets: "west" = HUC4 subregions (own page, own pooled calibration); "huc8" = screened Idaho water-supply HUC8s
+# (shown on the Idaho map; no truth of their own yet, so they use the five-basin calibration).
+def enabled(prefix="west"):
+    return all((C.STATIC / f"{f}_{prefix}_gefs.npz").exists() for f in ("weights", "clim"))
 
 
-def _shares(system, t0, T, P):
-    clim = C.load_climate(f"west_{system}")
+def _shares(prefix, system, t0, T, P):
+    clim = C.load_climate(f"{prefix}_{system}")
     return C.shares(C.member_percentiles(T, P, *C.reference(clim, t0, "week2")))
 
 
-def make(t0, gefs, ecmwf=None):
-    """gefs, ecmwf: (T[member, unit], P[member, unit]) for week 2 -> the West product dict."""
-    units = pd.read_csv(C.STATIC / "west_units.csv", dtype=str)
-    cal = pd.read_csv(C.STATIC / "west_calibration.csv")
-    sc = pd.read_csv(C.STATIC / "west_scores.csv", dtype={"huc4": str})
-    sg = _shares("gefs", t0, *gefs)
+def make(t0, gefs, ecmwf=None, prefix="west"):
+    """gefs, ecmwf: (T[member, unit], P[member, unit]) for week 2 -> the product dict of a unit set."""
+    units = pd.read_csv(C.STATIC / f"{prefix}_units.csv", dtype=str)
+    ids = units.iloc[:, 0]
+    own = (C.STATIC / f"{prefix}_calibration.csv").exists()
+    cal = pd.read_csv(C.STATIC / (f"{prefix}_calibration.csv" if own else "calibration.csv"))
+    sp = C.STATIC / f"{prefix}_scores.csv"
+    sc = pd.read_csv(sp, dtype={"huc4": str}) if sp.exists() else None
+    sg = _shares(prefix, "gefs", t0, *gefs)
     systems = {"gefs": int(gefs[0].shape[0])}
     if ecmwf is not None:
-        se = _shares("ecmwf", t0, *ecmwf)
+        se = _shares(prefix, "ecmwf", t0, *ecmwf)
         systems["ecmwf"] = int(ecmwf[0].shape[0])
         sh, prod = {ev: (sg[ev] + se[ev]) / 2 for ev in C.EVENTS}, "week2"
     else:
         se, sh, prod = None, sg, "week2_gefs"
     sea = C.season(t0)
     base = cal[(cal["product"] == prod) & (cal.season == sea)].set_index("event")["base_rate"]
-    roc = sc[(sc["product"] == prod) & (sc.season == sea)].set_index(["huc4", "event"])["roc"]
+    roc = {} if sc is None else sc[(sc["product"] == prod) & (sc.season == sea)].set_index(["huc4", "event"])["roc"]
     out = dict(init=str(t0.date()), season=sea, systems=systems, week2_product=prod,
                week2_dates=[str((t0 + pd.Timedelta(days=W2[0] - 1)).date()), str((t0 + pd.Timedelta(days=W2[1] - 1)).date())],
-               alert_odds=C.A["alert_odds"], alerting=sea in C.A["alert_seasons"], events=C.A["events"], units={})
-    for i, (h, name) in enumerate(zip(units.huc4, units.name)):
+               alert_odds=C.A["alert_odds"], alerting=sea in C.A["alert_seasons"], events=C.A["events"],
+               calibration="own" if own else "five Idaho basins", units={})
+    for i, (h, name) in enumerate(zip(ids, units.name)):
         u = dict(name=name, week2={})
         for ev in C.A["events"]:
             odds = float(C.calibrate(sh[ev][i], ev, prod, t0, cal))
@@ -62,28 +68,29 @@ def make(t0, gefs, ecmwf=None):
 
 
 def history_rows(o):
-    return pd.DataFrame([dict(init=o["init"], huc4=h, event=ev, product=o["week2_product"], share=v["share"], odds=v["odds"])
+    return pd.DataFrame([dict(init=o["init"], unit=h, event=ev, product=o["week2_product"], share=v["share"], odds=v["odds"])
                          for h, u in o["units"].items() for ev, v in u["week2"].items()])
 
 
-def run(ds, t0, ecmwf, newest=True):
-    g = S.gefs_windows(ds, t0, {"week2": W2}, wname="west_gefs")["week2"]
-    o = make(t0, g, ecmwf)
-    p = C.PRODUCTS / "west"
+def run(ds, t0, ecmwf, newest=True, prefix="west"):
+    g = S.gefs_windows(ds, t0, {"week2": W2}, wname=f"{prefix}_gefs")["week2"]
+    o = make(t0, g, ecmwf, prefix)
+    p = C.PRODUCTS / prefix
     p.mkdir(parents=True, exist_ok=True)
     day = C.PRODUCTS / f"{t0:%Y%m%d}"
     day.mkdir(exist_ok=True)
-    json.dump(o, open(day / "west.json", "w"))
+    json.dump(o, open(day / f"{prefix}.json", "w"))
     hp, h = p / "history.csv", history_rows(o)
     if hp.exists():
-        old = pd.read_csv(hp, dtype={"huc4": str})
-        h = pd.concat([old[old.init != o["init"]], h]).sort_values(["init", "huc4", "event"])
+        old = pd.read_csv(hp, dtype=str).rename(columns={"huc4": "unit"}).astype({"share": float, "odds": float})
+        h = pd.concat([old[old.init != o["init"]], h]).sort_values(["init", "unit", "event"])
     h.to_csv(hp, index=False)
     if newest:
         json.dump(o, open(p / "latest.json", "w"))
-        (p / "index.html").write_text(render(o))
+        if prefix == "west":
+            (p / "index.html").write_text(render(o))
     n = sum(1 for u in o["units"].values() for v in u["week2"].values() if v["odds"] is not None and v["odds"] >= o["alert_odds"])
-    print(f"West: {len(o['units'])} HUC4 units, {n} unit-events at or above {o['alert_odds']:.0%}", flush=True)
+    print(f"{prefix}: {len(o['units'])} units, {n} unit-events at or above {o['alert_odds']:.0%}", flush=True)
     return o
 
 

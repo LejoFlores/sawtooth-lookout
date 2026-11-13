@@ -432,18 +432,41 @@ def basin_status(o, h):
     return out
 
 
+def huc8_status(o):
+    """Screened water-supply HUC8s for this start: map level and tooltip lines (odds only; no alerts, no pages)."""
+    f = C.PRODUCTS / o["init"].replace("-", "") / "huc8.json"
+    if not f.exists():
+        return {}
+    out = {}
+    for hid, u in json.load(open(f))["units"].items():
+        lv, lines = "lo", []
+        for ev in C.A["events"]:
+            v = u["week2"][ev]
+            if v["odds"] is None:
+                continue
+            lines.append(f"{EV_LABEL[ev]}: {v['odds']:.0%}")
+            if v["odds"] >= C.A["alert_odds"]:
+                lv = "hi"
+            elif v["odds"] >= 1.5 * v["base_rate"] and lv == "lo":
+                lv = "mid"
+        if lines:
+            out[hid] = dict(color=LEVEL[lv][0], lines=lines)
+    return out
+
+
 def map_section(o, h, up):
     st = json.dumps(basin_status(o, h))
+    s8 = huc8_status(o)
     legend = "".join(f"<span style='background:{c}'></span>{t}" for c, t in LEVEL.values()) + \
-        "<span style='background:#cbd5e1'></span>coming soon"
+        "<span style='background:#cbd5e1'></span>not forecast"
     return f"""<h2>Basins</h2>
-<p class=mut>Shaded by the highest week-2 odds among the alerting events. Click a basin for its odds trend and
-member-by-member table. Grey basins are not forecast yet: coming soon.</p>
+<p class=mut>Shaded by the highest week-2 odds among the alerting events. Click an outlined basin for its odds trend
+and member-by-member table. {"The lighter basins are other water-supply basins (HUC8s above NRCS forecast points, with snow sites): hover for their odds. They are experimental, use the calibration of the five outlined basins and open no alerts. " if s8 else ""}Grey basins are not forecast.</p>
 <div id=map></div><p class="mut legend">{legend}</p>
 <script>
 (function(){{
   if (!window.L) return;
-  var S = {st}, up = {json.dumps(up)};
+  var S = {st}, S8 = {json.dumps(s8)}, up = {json.dumps(up)};
   var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([45.0, -114.6], 6);
   // USGS National Map: public, no API key. The page works without it if the tiles fail to load.
@@ -451,8 +474,12 @@ member-by-member table. Grey basins are not forecast yet: coming soon.</p>
     {{maxZoom: 10, opacity: dark ? 0.75 : 1, attribution: 'Basemap: USGS The National Map'}}).addTo(m);
   function get(u) {{ return fetch(up + u).then(function(r) {{ return r.json(); }}); }}
   Promise.all([get('map/others.geojson'), get('map/idaho.geojson'), get('map/active.geojson')]).then(function(g) {{
-    L.geoJSON(g[0], {{style: {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}},
-      onEachFeature: function(f, l) {{ l.bindTooltip('<b>' + f.properties.name + '</b><br>Coming soon', {{sticky: true}}); }}
+    L.geoJSON(g[0], {{
+      style: function(f) {{ var s = S8[f.properties.huc8];
+        return s ? {{color: '#475569', weight: 0.7, fillColor: s.color, fillOpacity: 0.3}}
+                 : {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}}; }},
+      onEachFeature: function(f, l) {{ var s = S8[f.properties.huc8];
+        l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental</i>' : 'Not forecast'), {{sticky: true}}); }}
     }}).addTo(m);
     L.geoJSON(g[1], {{style: {{color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}}, interactive: false}}).addTo(m);
     var act = L.geoJSON(g[2], {{

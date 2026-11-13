@@ -1,7 +1,7 @@
 """Build the web map layers in static/map/ (run once; outputs are committed).
 
   static/map/active.geojson   the basins Sawtooth Lookout forecasts (from static/basins.gpkg)
-  static/map/others.geojson   other Idaho HUC8 basins, shown greyed as "coming soon"
+  static/map/others.geojson   other Idaho HUC8 basins, coloured when screened as water-supply HUC8s (static/huc8_units.csv), else grey
                               (USGS Watershed Boundary Dataset, regions 16 and 17, HUC8s whose states include ID,
                               minus those mostly inside an active basin)
   static/map/idaho.geojson    state outline (us-atlas 3.0.1 states-10m, from US Census cartographic boundaries)

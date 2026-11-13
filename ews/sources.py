@@ -100,8 +100,17 @@ def _fetch(t0, step, entry, session):
 
 
 # Weight sets every ECMWF message is reduced with, concatenated along the unit axis: the Idaho basins first, then
-# the West-wide HUC4 units when their static files exist (one download serves both).
-ECMWF_SETS = ["ecmwf"] + (["west_ecmwf"] if (C.STATIC / "weights_west_ecmwf.npz").exists() else [])
+# the West-wide HUC4 units and the Idaho HUC8 units when their static files exist (one download serves all).
+ECMWF_SETS = ["ecmwf"] + [f"{k}_ecmwf" for k in ("west", "huc8") if (C.STATIC / f"weights_{k}_ecmwf.npz").exists()]
+
+
+def ecmwf_split(x):
+    """Array with the concatenated unit axis last -> {weight set: its slice}."""
+    out, i = {}, 0
+    for w in ECMWF_SETS:
+        n = C.load_weights(w)[2].shape[0]
+        out[w], i = x[..., i:i + n], i + n
+    return out
 
 
 def _decode_basins(buf):

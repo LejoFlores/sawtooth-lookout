@@ -114,15 +114,16 @@ def history_rows(o):
 def run_one(ds, t0, use_ecmwf):
     print("GEFS start", t0.date(), flush=True)
     gefs = S.gefs_windows(ds, t0, W)
-    ec = ec_west = None
+    ec, ec_more = None, {}
     if use_ecmwf and S.ecmwf_available(t0):
         # The S3 mirror throttles (503) bursts of range requests: retry the whole download more gently before
         # falling back to GEFS only.
         for attempt, workers in enumerate((8, 3, 1)):
             try:
                 T, P, _, daily = S.ecmwf_window(t0, *W["week2"], workers=workers)
-                nb = len(C.BASINS)
-                ec, ec_west = (T[:, :nb], P[:, :nb], daily[:, :, :nb]), (T[:, nb:], P[:, nb:])
+                Ts, Ps = S.ecmwf_split(T), S.ecmwf_split(P)
+                ec = (Ts["ecmwf"], Ps["ecmwf"], S.ecmwf_split(daily)["ecmwf"])
+                ec_more = {k[:-6]: (Ts[k], Ps[k]) for k in Ts if k != "ecmwf"}
                 break
             except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
                 print(f"ECMWF download failed ({workers} workers):", repr(e)[:300], flush=True)
@@ -144,16 +145,17 @@ def run_one(ds, t0, use_ecmwf):
         old = pd.read_csv(hp)
         h = pd.concat([old[old.init != o["init"]], h]).sort_values(["init", "basin", "event"])
     h.to_csv(hp, index=False)
+    from . import west
+    for prefix in ("huc8", "west"):                    # extra unit sets never block the Idaho products
+        try:
+            if west.enabled(prefix):
+                west.run(ds, t0, ec_more.get(prefix) if ec is not None else None, newest, prefix)
+        except Exception as e:  # noqa: BLE001
+            print(f"{prefix} units failed:", repr(e)[:500], flush=True)
     from . import page
     page.write(o, h, root=newest)
     if not newest:                                     # backfill: refresh the root page's trend with the new row
         page.write(json.load(open(lp)), h, root=True)
-    try:                                               # the West-wide map never blocks the Idaho products
-        from . import west
-        if west.enabled():
-            west.run(ds, t0, ec_west if ec is not None and ec_west[0].shape[1] else None, newest)
-    except Exception as e:  # noqa: BLE001
-        print("West-wide map failed:", repr(e)[:500], flush=True)
     for a in o["alerts"]:
         print(f"ALERT {LABEL[a['basin']]}: {a['event']} week 2, odds {a['odds']:.0%}")
     print("alerts:", len(o["alerts"]))

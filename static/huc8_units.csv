@@ -1,0 +1,61 @@
+huc8,name,tier
+16010201,Bear Lake,1: NRCS forecast point inside and snow sites
+16010202,Middle Bear,"2: snow sites, feeds a forecast point downstream"
+16010203,Little Bear-Logan,1: NRCS forecast point inside and snow sites
+16010204,Lower Bear-Malad,"2: snow sites, feeds a forecast point downstream"
+17010101,Middle Kootenai,1: NRCS forecast point inside and snow sites
+17010103,Yaak,1: NRCS forecast point inside and snow sites
+17010104,Lower Kootenai,1: NRCS forecast point inside and snow sites
+17010105,Moyie,1: NRCS forecast point inside and snow sites
+17010204,Middle Clark Fork,1: NRCS forecast point inside and snow sites
+17010205,Bitterroot,1: NRCS forecast point inside and snow sites
+17010213,Lower Clark Fork,1: NRCS forecast point inside and snow sites
+17010215,Priest,1: NRCS forecast point inside and snow sites
+17010216,Pend Oreille,1: NRCS forecast point inside and snow sites
+17010301,Upper Coeur d'Alene,1: NRCS forecast point inside and snow sites
+17010302,South Fork Coeur d'Alene,"2: snow sites, feeds a forecast point downstream"
+17010304,St. Joe,1: NRCS forecast point inside and snow sites
+17010305,Upper Spokane,1: NRCS forecast point inside and snow sites
+17010308,Little Spokane,"2: snow sites, feeds a forecast point downstream"
+17040103,Greys-Hoback,1: NRCS forecast point inside and snow sites
+17040105,Salt,1: NRCS forecast point inside and snow sites
+17040202,Upper Henrys,"2: snow sites, feeds a forecast point downstream"
+17040203,Lower Henrys,1: NRCS forecast point inside and snow sites
+17040204,Teton,1: NRCS forecast point inside and snow sites
+17040205,Willow,1: NRCS forecast point inside and snow sites
+17040207,Blackfoot,"2: snow sites, feeds a forecast point downstream"
+17040208,Portneuf,1: NRCS forecast point inside and snow sites
+17040209,Lake Walcott,1: NRCS forecast point inside and snow sites
+17040210,Raft,"2: snow sites, feeds a forecast point downstream"
+17040212,Upper Snake-Rock,"2: snow sites, feeds a forecast point downstream"
+17040213,Salmon Falls,1: NRCS forecast point inside and snow sites
+17040214,Beaver-Camas,1: NRCS forecast point inside and snow sites
+17040217,Little Lost,1: NRCS forecast point inside and snow sites
+17040218,Big Lost,1: NRCS forecast point inside and snow sites
+17040219,Big Wood,1: NRCS forecast point inside and snow sites
+17040220,Camas,1: NRCS forecast point inside and snow sites
+17040221,Little Wood,1: NRCS forecast point inside and snow sites
+17050102,Bruneau,1: NRCS forecast point inside and snow sites
+17050103,Middle Snake-Succor,1: NRCS forecast point inside and snow sites
+17050104,Upper Owyhee,1: NRCS forecast point inside and snow sites
+17050105,South Fork Owyhee,"2: snow sites, feeds a forecast point downstream"
+17050108,Jordan,"2: snow sites, feeds a forecast point downstream"
+17050111,North and Middle Forks Boise,"2: snow sites, feeds a forecast point downstream"
+17050113,South Fork Boise,1: NRCS forecast point inside and snow sites
+17050120,South Fork Payette,1: NRCS forecast point inside and snow sites
+17050122,Payette,1: NRCS forecast point inside and snow sites
+17050123,North Fork Payette,1: NRCS forecast point inside and snow sites
+17050124,Weiser,1: NRCS forecast point inside and snow sites
+17050201,Brownlee Reservoir,1: NRCS forecast point inside and snow sites
+17060103,Lower Snake-Asotin,1: NRCS forecast point inside and snow sites
+17060201,Upper Salmon,"2: snow sites, feeds a forecast point downstream"
+17060202,Pahsimeroi,"2: snow sites, feeds a forecast point downstream"
+17060203,Middle Salmon-Panther,1: NRCS forecast point inside and snow sites
+17060204,Lemhi,1: NRCS forecast point inside and snow sites
+17060208,South Fork Salmon,1: NRCS forecast point inside and snow sites
+17060210,Little Salmon,"2: snow sites, feeds a forecast point downstream"
+17060302,Lower Selway,1: NRCS forecast point inside and snow sites
+17060303,Lochsa,1: NRCS forecast point inside and snow sites
+17060306,Clearwater,1: NRCS forecast point inside and snow sites
+17060307,Upper North Fork Clearwater,"2: snow sites, feeds a forecast point downstream"
+17060308,Lower North Fork Clearwater,1: NRCS forecast point inside and snow sites

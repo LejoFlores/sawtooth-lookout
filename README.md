@@ -29,7 +29,10 @@ Payette at Lowman, Weiser near Weiser, Boise above Lucky Peak, Big Wood at Haile
 Days 8-21 from GEFS alone are shown as a heads-up and never alert.
 
 The landing page has a map of Idaho with each forecast basin shaded by its alert level; click a basin for its own
-page with the odds trend and the member-by-member table. Other Idaho basins are greyed out (coming soon).
+page with the odds trend and the member-by-member table. Sixty other water-supply HUC8 basins
+(those above NRCS water supply forecast points, with SNOTEL sites; `scripts/build_huc8.py`) are shaded by their odds
+on hover. They are experimental: they have no verification of their own yet, borrow the calibration of the five
+basins, and open no alerts. The remaining Idaho HUC8s are greyed out.
 The page also shows how the odds have moved over the last 7 runs, and it calls out alert-level crossings and steady
 rises. Alert issue comments say how today's odds compare with the previous run. Every day's page is kept under
 `YYYYMMDD/` and listed in `archive.html`. To backfill past starts, run the workflow with mode `backfill` and init
