@@ -61,14 +61,10 @@ jobs:
           git fetch --depth 1 origin reforecast-means
           git worktree add -B reforecast-means ../means FETCH_HEAD
           mkdir -p "../means/$NAME"
-          python - <<'PY'
-          import glob, os
-          import pandas as pd
-          fs = sorted(glob.glob("shards/*/prism_WY*.csv"))
-          df = pd.concat([pd.read_csv(f, dtype={"basin": str}) for f in fs]).sort_values(["date", "basin"])
-          out = f"../means/{os.environ['NAME']}/prism_basin_daily.csv"
-          df.to_csv(out, index=False)
-          print(len(fs), "water years,", df.date.nunique(), "days,", df.basin.nunique(), "basins ->", out)
-          PY
+          out="../means/$NAME/prism_basin_daily.csv"
+          fs=$(ls shards/*/prism_WY*.csv | sort -t Y -k2 -n)     # water-year order; rows inside are date-sorted
+          head -n 1 $(echo "$fs" | head -n 1) > "$out"
+          for f in $fs; do tail -n +2 "$f" >> "$out"; done
+          echo "$(echo "$fs" | wc -l) water years, $(($(wc -l < "$out") - 1)) rows -> $out"
           cd ../means
           git add -A && git commit -qm "PRISM basin means for $NAME (run ${{ github.run_id }})" && git push origin reforecast-means
