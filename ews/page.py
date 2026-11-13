@@ -444,7 +444,8 @@ def huc8_status(o):
             v = u["week2"][ev]
             if v["odds"] is None:
                 continue
-            lines.append(f"{EV_LABEL[ev]}: {v['odds']:.0%}")
+            sk = "" if v.get("hindcast_roc") is None else f" (past skill {v['hindcast_roc']:.2f})"
+            lines.append(f"{EV_LABEL[ev]}: {v['odds']:.0%}{sk}")
             if v["odds"] >= C.A["alert_odds"]:
                 lv = "hi"
             elif v["odds"] >= 1.5 * v["base_rate"] and lv == "lo":
@@ -479,7 +480,7 @@ and member-by-member table. {"The lighter basins are other water-supply basins (
         return s ? {{color: '#475569', weight: 0.7, fillColor: s.color, fillOpacity: 0.3}}
                  : {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}}; }},
       onEachFeature: function(f, l) {{ var s = S8[f.properties.huc8];
-        l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental</i>' : 'Not forecast'), {{sticky: true}}); }}
+        l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental. Skill is the ROC area in past forecasts: 0.5 none, 1 perfect.</i>' : 'Not forecast'), {{sticky: true}}); }}
     }}).addTo(m);
     L.geoJSON(g[1], {{style: {{color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}}, interactive: false}}).addTo(m);
     var act = L.geoJSON(g[2], {{

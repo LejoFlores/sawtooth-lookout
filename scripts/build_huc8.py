@@ -11,8 +11,12 @@ Outputs (static/):
   weights_huc8_gefs.npz, weights_huc8_ecmwf.npz   area shares on the live GEFS 0.25 deg grid and the 1.5 deg nodes
   clim_huc8_gefs.npz, clim_huc8_ecmwf.npz reforecast week-2 statistics per start, member, unit. ECMWF keeps the same
                                           starts as clim_ecmwf.npz, to match the calibration and keep the file small.
-There is no per-HUC8 truth yet, so odds use the five-basin calibration (static/calibration.csv).
-Run: python3 scripts/build_huc8.py idaho_huc8_screen.gpkg <means folder>   (from the repository root)
+  huc8_calibration.csv, huc8_scores.csv   logistic calibration per product/event/season pooled over the HUC8s, and
+                                          pooled and per-HUC8 hindcast scores, against <means>/prism_basin_daily.csv
+                                          (PRISM HUC8 means). HUC8s mostly in Canada have no PRISM truth: they are
+                                          left out of the hindcast and use the pooled calibration.
+Run: HINDCAST_DATA=... python3 scripts/build_huc8.py idaho_huc8_screen.gpkg <means folder>  (from the repository root;
+HINDCAST_DATA is only needed because build_west.py, whose hindcast this reuses, reads it at import)
 """
 import sys
 from pathlib import Path
@@ -77,6 +81,25 @@ def main(gpkg, means):
     np.savez_compressed(C.STATIC / "clim_huc8_ecmwf.npz", starts=pd.DatetimeIndex(st).values.astype("datetime64[D]"),
                         basins=names, T_week2=np.stack(T), P_week2=np.stack(P))
     print("ecmwf", len(st), np.stack(T).shape)
+    # hindcast against PRISM, as build_west does against CPC
+    from scripts import build_west as BW
+    raw = {}
+    for s0 in st:
+        d = np.load(means / "ecmwf" / f"{s0:%Y%m%d}.npz")
+        raw[s0] = (d["t2m"][:, :, idx], d["precip"][:, :, idx])
+    pr = pd.read_csv(means / "prism_basin_daily.csv", parse_dates=["date"], dtype={"basin": str})
+    To = pr.pivot(index="date", columns="basin", values="tmean_C").asfreq("D").reindex(columns=names)
+    Po = pr.pivot(index="date", columns="basin", values="ppt_mm").asfreq("D").reindex(columns=names)
+    missing = [h for h in names if To[h].isna().all()]
+    have = [h for h in names if h not in missing]
+    for h in missing:                                         # placeholder so the window statistics are finite
+        To[h], Po[h] = To[have[0]], Po[have[0]]
+    R = BW.hindcast(raw, To, Po, names, prefix="huc8")
+    R = R[~R.huc4.isin(missing)].reset_index(drop=True)
+    S = BW.calibrate(R, prefix="huc8")
+    print("no PRISM truth:", missing)
+    pd.set_option("display.width", 250)
+    print(S[(S.huc4 == "all") & S.event.isin(C.A["events"])].to_string(index=False))
 
 
 if __name__ == "__main__":

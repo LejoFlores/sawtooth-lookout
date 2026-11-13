@@ -20,7 +20,7 @@ HI = 0.25                                   # map shading: odds at or above this
 
 
 # Unit sets: "west" = HUC4 subregions (own page, own pooled calibration); "huc8" = screened Idaho water-supply HUC8s
-# (shown on the Idaho map; no truth of their own yet, so they use the five-basin calibration).
+# (shown on the Idaho map; calibrated and scored against PRISM HUC8 means, pooled over the HUC8s).
 def enabled(prefix="west"):
     return all((C.STATIC / f"{f}_{prefix}_gefs.npz").exists() for f in ("weights", "clim"))
 
