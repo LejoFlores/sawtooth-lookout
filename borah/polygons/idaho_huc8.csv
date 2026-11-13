@@ -1,0 +1,90 @@
+huc8,name,states,area_km2,frac_above_fcst_pt,n_fcst_pts_inside,n_fcst_pts_downstream,snotel_sites,example_points,tier
+16010201,Bear Lake,"ID,UT",3281,1.0,1,2,4,Bear R bl Stewart Dam; Bear R bl Stewart Dam,1: NRCS forecast point inside and snow sites
+16010203,Little Bear-Logan,"ID,UT",2290,1.0,3,4,8,Blacksmith Fk nr Hyrum; Little Bear at Paradise; Logan R nr Logan,1: NRCS forecast point inside and snow sites
+17010101,Middle Kootenai,"CN,ID,MT",9537,1.0,2,6,4,Libby Reservoir Inflow; Tobacco R nr Eureka,1: NRCS forecast point inside and snow sites
+17010103,Yaak,"CN,ID,MT",2051,1.0,1,5,1,Yaak R nr Troy,1: NRCS forecast point inside and snow sites
+17010104,Lower Kootenai,"CN,ID,MT",9700,1.0,2,5,2,Boundary Ck nr Porthill; Kootenai R at Leonia; Boundary Ck nr Porthill,1: NRCS forecast point inside and snow sites
+17010105,Moyie,"CN,ID,MT",2032,1.0,1,4,1,Moyie R at Eastport; Moyie R at Eastport,1: NRCS forecast point inside and snow sites
+17010204,Middle Clark Fork,"ID,MT",5140,1.0,3,10,2,Clark Fork R ab Missoula; Clark Fork R at St. Regis; Clark Fork R bl Missoula,1: NRCS forecast point inside and snow sites
+17010205,Bitterroot,"ID,MT",7402,1.0,3,13,6,Bitterroot R Nr Darby; Bitterroot R nr Missoula; WF Bitterroot R Nr Conner,1: NRCS forecast point inside and snow sites
+17010213,Lower Clark Fork,"ID,MT",6052,1.0,3,8,2,Clark Fork R bl Cabinet Gorge Dam; Clark Fork R nr Plains; Prospect Ck at Thompson Falls,1: NRCS forecast point inside and snow sites
+17010215,Priest,"CN,ID,WA",2541,1.0,2,7,1,Priest R Outflow NR Coolin; Priest R nr Priest River; Pend Oreille Lake Inflow,1: NRCS forecast point inside and snow sites
+17010216,Pend Oreille,"CN,ID,WA",4233,1.0,2,5,1,Pend Oreille Lake Inflow; Pend Oreille R bl Box Canyon; Pend Oreille Lake Inflow,1: NRCS forecast point inside and snow sites
+17010301,Upper Coeur d'Alene,"ID,MT",2322,1.0,1,6,1,NF Coeur dAlene R at Enaville; NF Coeur dAlene R at Enaville; Spokane R nr Post Falls,1: NRCS forecast point inside and snow sites
+17010304,St. Joe,"ID,MT",4781,1.0,1,6,2,St. Joe R at Calder; Spokane R nr Post Falls; St. Joe R at Calder,1: NRCS forecast point inside and snow sites
+17010305,Upper Spokane,"ID,WA",1523,0.96,1,5,1,Spokane R nr Post Falls; Spokane R nr Post Falls,1: NRCS forecast point inside and snow sites
+17040103,Greys-Hoback,"ID,WY",4097,1.0,2,7,3,Greys R ab Reservoir nr Alpine; Snake R ab Reservoir nr Alpine; Snake R at Neeley,1: NRCS forecast point inside and snow sites
+17040105,Salt,"ID,WY",2309,1.0,1,7,3,Salt R ab Reservoir nr Etna; Snake R at Neeley; Snake R nr Heise,1: NRCS forecast point inside and snow sites
+17040203,Lower Henrys,"ID,WY",2915,0.82,3,6,1,Falls R nr Ashton; Henrys Fk nr Ashton; Henrys Fk nr Rexburg,1: NRCS forecast point inside and snow sites
+17040204,Teton,"ID,WY",2886,1.0,2,6,2,Teton R nr Driggs; Teton R nr St Anthony; Henrys Fk nr Rexburg,1: NRCS forecast point inside and snow sites
+17040205,Willow,ID,1792,1.0,1,4,1,Willow Ck nr Ririe; Snake R at Neeley; Willow Ck nr Ririe,1: NRCS forecast point inside and snow sites
+17040208,Portneuf,ID,4344,1.0,1,4,3,Portneuf R at Topaz; Portneuf R at Topaz; Snake R at Neeley,1: NRCS forecast point inside and snow sites
+17040209,Lake Walcott,ID,8702,0.51,1,3,1,Snake R at Neeley; Snake R at Neeley,1: NRCS forecast point inside and snow sites
+17040213,Salmon Falls,"ID,NV",5681,1.0,1,3,3,Salmon Falls Ck nr San Jacinto,1: NRCS forecast point inside and snow sites
+17040214,Beaver-Camas,"ID,MT",3289,0.29,1,1,1,Camas Ck at Camas; Camas Ck at Camas,1: NRCS forecast point inside and snow sites
+17040217,Little Lost,ID,2496,0.52,1,1,2,Little Lost R bl Wet Ck nr Howe; Little Lost R bl Wet Ck nr Howe,1: NRCS forecast point inside and snow sites
+17040218,Big Lost,ID,6355,0.35,2,2,3,Big Lost R at Howell Ranch; Big Lost R bl Mackay Reservoir; Big Lost R at Howell Ranch,1: NRCS forecast point inside and snow sites
+17040219,Big Wood,ID,3714,1.0,3,5,6,Big Wood R ab Magic Reservoir; Big Wood R at Hailey; Big Wood R bl Magic Dam ,1: NRCS forecast point inside and snow sites
+17040220,Camas,ID,1780,1.0,1,4,2,Camas Ck nr Blaine; Big Wood R bl Magic Dam ; Camas Ck nr Blaine,1: NRCS forecast point inside and snow sites
+17040221,Little Wood,ID,3164,0.9,2,4,3,Little Wood R ab High Five Ck; Little Wood R nr Carey; Little Wood R ab High Five Ck,1: NRCS forecast point inside and snow sites
+17050102,Bruneau,"ID,NV",8749,1.0,3,5,5,Bruneau R at Rowland; Bruneau R nr Hot Spring; Jarbidge River Below Jarbidge,1: NRCS forecast point inside and snow sites
+17050103,Middle Snake-Succor,"ID,OR",6065,1.0,1,3,1,Reynolds Ck at Tollgate; Reynolds Ck at Tollgate,1: NRCS forecast point inside and snow sites
+17050104,Upper Owyhee,"ID,NV",5552,1.0,1,5,4,Owyhee R nr Gold Ck,1: NRCS forecast point inside and snow sites
+17050113,South Fork Boise,ID,3384,1.0,1,4,2,SF Boise R at Anderson Ranch Dam; Boise R nr Boise; SF Boise R at Anderson Ranch Dam,1: NRCS forecast point inside and snow sites
+17050120,South Fork Payette,ID,2124,1.0,2,5,4,Deadwood Reservoir Inflow; SF Payette R at Lowman; Deadwood Reservoir Inflow,1: NRCS forecast point inside and snow sites
+17050122,Payette,ID,3171,1.0,1,3,1,Payette R nr Horseshoe Bend; Payette R nr Horseshoe Bend,1: NRCS forecast point inside and snow sites
+17050123,North Fork Payette,ID,2402,1.0,3,6,1,Lake Fork Payette R nr McCall; NF Payette R at Cascade; NF Payette R nr Banks,1: NRCS forecast point inside and snow sites
+17050124,Weiser,ID,4364,1.0,1,3,4,Weiser R nr Weiser; Weiser R nr Weiser,1: NRCS forecast point inside and snow sites
+17050201,Brownlee Reservoir,"ID,OR",3375,1.0,1,3,1,Pine Ck nr Oxbow,1: NRCS forecast point inside and snow sites
+17060103,Lower Snake-Asotin,"ID,OR,WA",1803,1.0,1,3,2,Asotin Ck at Asotin,1: NRCS forecast point inside and snow sites
+17060203,Middle Salmon-Panther,"ID,MT",4719,1.0,1,4,3,Salmon R at Salmon; Salmon R at Salmon; Salmon R at White Bird,1: NRCS forecast point inside and snow sites
+17060204,Lemhi,"ID,MT",3267,1.0,1,4,2,Lemhi R nr Lemhi; Lemhi R nr Lemhi; Salmon R at White Bird,1: NRCS forecast point inside and snow sites
+17060208,South Fork Salmon,ID,3394,1.0,2,5,2,Johnson Ck at Yellow Pine; SF Salmon R nr Krassel Ranger Station; Johnson Ck at Yellow Pine,1: NRCS forecast point inside and snow sites
+17060302,Lower Selway,"ID,MT",2659,1.0,1,5,1,Selway R nr Lowell; Clearwater R at Orofino; Clearwater R at Spalding,1: NRCS forecast point inside and snow sites
+17060303,Lochsa,"ID,MT",3060,1.0,1,5,1,Lochsa R nr Lowell; Clearwater R at Orofino; Clearwater R at Spalding,1: NRCS forecast point inside and snow sites
+17060306,Clearwater,"ID,WA",6102,1.0,2,4,3,Clearwater R at Orofino; Clearwater R at Spalding; Clearwater R at Orofino,1: NRCS forecast point inside and snow sites
+17060308,Lower North Fork Clearwater,ID,2972,1.0,1,4,2,Dworshak Reservoir Inflow; Clearwater R at Spalding; Dworshak Reservoir Inflow,1: NRCS forecast point inside and snow sites
+16010202,Middle Bear,"ID,UT",3324,1.0,0,1,3,,"2: snow sites, feeds a forecast point downstream"
+16010204,Lower Bear-Malad,"ID,UT",3242,1.0,0,1,1,,"2: snow sites, feeds a forecast point downstream"
+17010302,South Fork Coeur d'Alene,"ID,MT",774,1.0,0,5,3,Spokane R nr Post Falls,"2: snow sites, feeds a forecast point downstream"
+17010308,Little Spokane,"ID,WA",1837,1.0,0,4,1,,"2: snow sites, feeds a forecast point downstream"
+17040202,Upper Henrys,"ID,MT,WY",2838,1.0,0,5,2,Henrys Fk nr Ashton; Henrys Fk nr Rexburg; Snake R at Neeley,"2: snow sites, feeds a forecast point downstream"
+17040207,Blackfoot,ID,3290,1.0,0,3,2,Snake R at Neeley,"2: snow sites, feeds a forecast point downstream"
+17040210,Raft,"ID,UT",3820,1.0,0,2,1,,"2: snow sites, feeds a forecast point downstream"
+17040212,Upper Snake-Rock,ID,6602,0.95,0,2,2,,"2: snow sites, feeds a forecast point downstream"
+17050105,South Fork Owyhee,"ID,NV,OR",4856,0.99,0,4,4,,"2: snow sites, feeds a forecast point downstream"
+17050108,Jordan,"ID,OR",3385,1.0,0,4,1,,"2: snow sites, feeds a forecast point downstream"
+17050111,North and Middle Forks Boise,ID,1968,1.0,0,4,4,Boise R nr Boise; Boise R nr Twin Springs,"2: snow sites, feeds a forecast point downstream"
+17060201,Upper Salmon,ID,6279,1.0,0,4,2,Salmon R at Salmon; Salmon R at White Bird,"2: snow sites, feeds a forecast point downstream"
+17060202,Pahsimeroi,ID,2151,1.0,0,4,1,Salmon R at Salmon; Salmon R at White Bird,"2: snow sites, feeds a forecast point downstream"
+17060210,Little Salmon,ID,1494,1.0,0,3,2,Salmon R at White Bird,"2: snow sites, feeds a forecast point downstream"
+17060307,Upper North Fork Clearwater,"ID,MT",3358,1.0,0,4,3,Clearwater R at Spalding; Dworshak Reservoir Inflow,"2: snow sites, feeds a forecast point downstream"
+16010102,Central Bear,"ID,UT,WY",2123,1.0,1,3,0,Smiths Fk nr Border; Bear R bl Stewart Dam,"3: lowland or mainstem reach, or not forecast"
+16020309,Curlew Valley,"ID,UT",5856,0.95,0,1,0,,"3: lowland or mainstem reach, or not forecast"
+17010214,Pend Oreille Lake,"ID,WA",3141,0.83,0,5,0,Pend Oreille Lake Inflow,"3: lowland or mainstem reach, or not forecast"
+17010303,Coeur d'Alene Lake,"ID,WA",1707,1.0,0,5,0,Spokane R nr Post Falls,"3: lowland or mainstem reach, or not forecast"
+17010306,Hangman,"ID,WA",1794,1.0,0,4,0,,"3: lowland or mainstem reach, or not forecast"
+17040104,Palisades,"ID,WY",2406,1.0,2,5,0,Snake R nr Heise; Snake R nr Irwin ; Snake R at Neeley,"3: lowland or mainstem reach, or not forecast"
+17040201,Idaho Falls,ID,1413,0.86,0,3,0,Snake R at Neeley,"3: lowland or mainstem reach, or not forecast"
+17040206,American Falls,ID,5593,0.92,0,3,0,Snake R at Neeley,"3: lowland or mainstem reach, or not forecast"
+17040211,Goose,"ID,NV,UT",2796,1.0,3,5,0,Goose Ck ab Trapper Ck nr Oakley; Oakley Reservoir Inflow; Trapper Ck nr Oakley,"3: lowland or mainstem reach, or not forecast"
+17040215,Medicine Lodge,"ID,MT",3006,0.0,0,0,0,,"3: lowland or mainstem reach, or not forecast"
+17040216,Birch,"ID,MT",1574,0.0,0,0,0,,"3: lowland or mainstem reach, or not forecast"
+17050101,C.J. Strike Reservoir,ID,5392,1.0,0,2,0,,"3: lowland or mainstem reach, or not forecast"
+17050106,East Little Owyhee,"ID,NV,OR",2396,0.9,0,4,0,,"3: lowland or mainstem reach, or not forecast"
+17050107,Middle Owyhee,"ID,NV,OR",3872,1.0,1,4,0,Owyhee R nr Rome,"3: lowland or mainstem reach, or not forecast"
+17050112,Boise-Mores,ID,1608,1.0,2,5,0,Boise R nr Twin Springs; Mores Ck nr Arrowrock Dam; Boise R nr Boise,"3: lowland or mainstem reach, or not forecast"
+17050114,Lower Boise,ID,3441,1.0,1,3,0,Boise R nr Boise; Boise R nr Boise,"3: lowland or mainstem reach, or not forecast"
+17050115,Middle Snake-Payette,"ID,OR",752,1.0,0,2,0,,"3: lowland or mainstem reach, or not forecast"
+17050121,Middle Fork Payette,ID,878,1.0,0,3,0,Payette R nr Horseshoe Bend,"3: lowland or mainstem reach, or not forecast"
+17060101,Hells Canyon,"ID,OR",1402,1.0,0,2,0,,"3: lowland or mainstem reach, or not forecast"
+17060107,Lower Snake-Tucannon,"ID,WA",3779,1.0,1,2,0,Snake R bl Lower Granite Dam-NWS,"3: lowland or mainstem reach, or not forecast"
+17060108,Palouse,"ID,WA",6018,1.0,0,1,0,,"3: lowland or mainstem reach, or not forecast"
+17060109,Rock,"ID,WA",2473,0.9,0,1,0,,"3: lowland or mainstem reach, or not forecast"
+17060205,Upper Middle Fork Salmon,ID,3890,1.0,1,4,0,MF Salmon R at MF Lodge; MF Salmon R at MF Lodge; Salmon R at White Bird,"3: lowland or mainstem reach, or not forecast"
+17060206,Lower Middle Fork Salmon,ID,3563,1.0,0,3,0,Salmon R at White Bird,"3: lowland or mainstem reach, or not forecast"
+17060207,Middle Salmon-Chamberlain,"ID,MT",4436,1.0,0,3,0,Salmon R at White Bird,"3: lowland or mainstem reach, or not forecast"
+17060209,Lower Salmon,ID,3057,1.0,1,3,0,Salmon R at White Bird; Salmon R at White Bird,"3: lowland or mainstem reach, or not forecast"
+17060301,Upper Selway,"ID,MT",2549,1.0,0,5,0,Clearwater R at Orofino; Clearwater R at Spalding; Selway R nr Lowell,"3: lowland or mainstem reach, or not forecast"
+17060304,Middle Fork Clearwater,ID,566,1.0,0,4,0,Clearwater R at Orofino; Clearwater R at Spalding,"3: lowland or mainstem reach, or not forecast"
+17060305,South Fork Clearwater,ID,3052,1.0,0,4,0,Clearwater R at Orofino; Clearwater R at Spalding,"3: lowland or mainstem reach, or not forecast"

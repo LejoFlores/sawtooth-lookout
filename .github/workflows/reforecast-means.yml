@@ -1,0 +1,111 @@
+# Reforecast basin means for new Sawtooth Lookout basins, on GitHub's runners (the cloud-run counterpart of borah/).
+# Each shard extracts its share of the GEFSv12 (1043 Wednesday starts 2000-2019) and ECMWF (2289 starts 2006-2025)
+# reforecasts with borah/gefs_grid.py and borah/ecmwf_grid.py, averages them over the polygons with
+# borah/polygon_means.py, and keeps only the means (the grids are dropped). The last job commits every shard's npz
+# files to the reforecast-means branch, under $NAME/{gefs,ecmwf}/YYYYMMDD.npz.
+# Runs on a push to a claude/** branch whose commit message contains [refc], or by hand once this file is on main.
+name: reforecast-means
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [borah/**, .github/workflows/reforecast-means.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  POLYGONS: borah/polygons/idaho_huc8.gpkg
+  LAYER: huc8
+  ID: huc8
+  KEEP: borah/polygons/idaho_huc8.csv
+  NAME: idaho_huc8
+
+jobs:
+  shard:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[refc]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        include:
+          - {system: gefs, ntasks: 24, task: 0}
+          - {system: gefs, ntasks: 24, task: 1}
+          - {system: gefs, ntasks: 24, task: 2}
+          - {system: gefs, ntasks: 24, task: 3}
+          - {system: gefs, ntasks: 24, task: 4}
+          - {system: gefs, ntasks: 24, task: 5}
+          - {system: gefs, ntasks: 24, task: 6}
+          - {system: gefs, ntasks: 24, task: 7}
+          - {system: gefs, ntasks: 24, task: 8}
+          - {system: gefs, ntasks: 24, task: 9}
+          - {system: gefs, ntasks: 24, task: 10}
+          - {system: gefs, ntasks: 24, task: 11}
+          - {system: gefs, ntasks: 24, task: 12}
+          - {system: gefs, ntasks: 24, task: 13}
+          - {system: gefs, ntasks: 24, task: 14}
+          - {system: gefs, ntasks: 24, task: 15}
+          - {system: gefs, ntasks: 24, task: 16}
+          - {system: gefs, ntasks: 24, task: 17}
+          - {system: gefs, ntasks: 24, task: 18}
+          - {system: gefs, ntasks: 24, task: 19}
+          - {system: gefs, ntasks: 24, task: 20}
+          - {system: gefs, ntasks: 24, task: 21}
+          - {system: gefs, ntasks: 24, task: 22}
+          - {system: gefs, ntasks: 24, task: 23}
+          - {system: ecmwf, ntasks: 4, task: 0}
+          - {system: ecmwf, ntasks: 4, task: 1}
+          - {system: ecmwf, ntasks: 4, task: 2}
+          - {system: ecmwf, ntasks: 4, task: 3}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install numpy pandas xarray netCDF4 eccodes requests geopandas pyogrio shapely icechunk zarr
+      - name: Extract
+        run: |
+          python borah/${{ matrix.system }}_grid.py --out "$RUNNER_TEMP/arch" --task ${{ matrix.task }} --ntasks ${{ matrix.ntasks }} \
+            ${{ matrix.system == 'gefs' && '--workers 11' || '' }} | tee extract.log
+          grep -c "FAILED\|MISSING" extract.log || true
+      - name: Basin means
+        run: |
+          python borah/polygon_means.py --polygons $POLYGONS --layer $LAYER --id $ID --keep $KEEP \
+            --system ${{ matrix.system }} --archive "$RUNNER_TEMP/arch" --out "out/$NAME"
+          mv extract.log "out/$NAME/extract_${{ matrix.system }}_${{ matrix.task }}.log"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: means-${{ matrix.system }}-${{ matrix.task }}
+          path: out
+          retention-days: 7
+
+  commit:
+    needs: shard
+    if: always() && needs.shard.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/download-artifact@v4
+        with:
+          path: shards
+      - name: Commit to the reforecast-means branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin reforecast-means >/dev/null; then
+            git fetch --depth 1 origin reforecast-means
+            git worktree add -B reforecast-means ../means FETCH_HEAD
+          else
+            git worktree add --detach ../means && cd ../means && git checkout --orphan reforecast-means && git rm -rqf . && cd -
+          fi
+          for d in shards/*/; do cp -r "$d"* ../means/; done
+          cd ../means
+          mkdir -p "$NAME/logs" && mv "$NAME"/extract_*.log "$NAME/logs/" 2>/dev/null || true
+          echo "gefs: $(ls $NAME/gefs | wc -l) starts, ecmwf: $(ls $NAME/ecmwf | wc -l) starts"
+          git add -A && git commit -qm "Reforecast basin means for $NAME (run ${{ github.run_id }})" && git push origin reforecast-means

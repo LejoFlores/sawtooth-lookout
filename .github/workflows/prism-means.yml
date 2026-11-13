@@ -1,0 +1,71 @@
+# PRISM daily truth (4 km tmean, ppt) for new Sawtooth Lookout basins, one shard per water year on GitHub's runners.
+# The last job joins the years into $NAME/prism_basin_daily.csv on the reforecast-means branch (date = calendar day,
+# i.e. PRISM day - 1, as static/prism_basin_daily.csv). Runs on a claude/** push whose message contains [prism], or by hand.
+name: prism-means
+
+on:
+  push:
+    branches: ["claude/**"]
+    paths: [borah/**, .github/workflows/prism-means.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  POLYGONS: borah/polygons/idaho_huc8.gpkg
+  LAYER: huc8
+  ID: huc8
+  KEEP: borah/polygons/idaho_huc8.csv
+  NAME: idaho_huc8
+
+jobs:
+  year:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[prism]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 9          # PRISM's web service is shared; keep the load modest
+      matrix:
+        wy: [2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013,
+             2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install numpy pandas requests geopandas pyogrio shapely pillow
+      - name: PRISM basin means
+        run: python borah/prism_means.py --polygons $POLYGONS --layer $LAYER --id $ID --keep $KEEP --out out --wy ${{ matrix.wy }}-${{ matrix.wy }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prism-${{ matrix.wy }}
+          path: out
+          retention-days: 7
+
+  commit:
+    needs: year
+    if: always() && needs.year.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: shards
+      - name: Commit to the reforecast-means branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --depth 1 origin reforecast-means
+          git worktree add -B reforecast-means ../means FETCH_HEAD
+          mkdir -p "../means/$NAME"
+          out="../means/$NAME/prism_basin_daily.csv"
+          fs=$(ls shards/*/prism_WY*.csv | sort -t Y -k2 -n)     # water-year order; rows inside are date-sorted
+          head -n 1 $(echo "$fs" | head -n 1) > "$out"
+          for f in $fs; do tail -n +2 "$f" >> "$out"; done
+          [ "$(wc -l < "$out")" -gt 1000 ] || { echo "joined file has almost no rows"; exit 1; }
+          echo "$(echo "$fs" | wc -l) water years, $(($(wc -l < "$out") - 1)) rows -> $out"
+          cd ../means
+          git add -A && git commit -qm "PRISM basin means for $NAME (run ${{ github.run_id }})" && git push origin reforecast-means
