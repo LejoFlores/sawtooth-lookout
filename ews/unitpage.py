@@ -6,7 +6,6 @@ products/YYYYMMDD/huc8/index.html    the page for that start; ?b=<huc8> picks th
 products/huc8/index.html             the same page for the newest start
 The front page only links here (a click on the map), so adding units adds no rows to it.
 """
-import html
 import json
 
 import pandas as pd
