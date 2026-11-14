@@ -156,8 +156,7 @@ background:var(--lo);color:var(--fg);cursor:pointer}} .evbtn button.on{{backgrou
   var COL = {json.dumps({k: v[0] for k, v in Pg.LEVEL.items()})}, sel = 'all', layer;
   var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([41, -114], 5);
-  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{{z}}/{{y}}/{{x}}',
-    {{maxZoom: 8, opacity: dark ? 0.6 : 0.8, attribution: 'Basemap: USGS The National Map'}}).addTo(m);
+{Pg.BASE_JS}  slBase(m, dark, 8);
   function level(v) {{ return v.odds === null ? null : v.odds >= HI ? 'hi' : v.odds >= LV ? 'mid' : 'lo'; }}
   function unitLevel(s) {{
     var evs = sel === 'all' ? EV : [sel], best = null, rank = {{lo: 0, mid: 1, hi: 2}};
