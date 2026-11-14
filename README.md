@@ -1,3 +1,5 @@
+<img src="static/logo.svg" alt="" width="72" align="right">
+
 # Sawtooth Lookout
 
 Week-2 snow-drought early warning for five Idaho river basins, from Boise State University.

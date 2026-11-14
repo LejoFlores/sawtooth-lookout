@@ -91,6 +91,7 @@ def copy_assets(p):
     import shutil
     shutil.copytree(C.HERE / "vendor" / "leaflet", p / "vendor" / "leaflet", dirs_exist_ok=True)
     shutil.copytree(C.STATIC / "map", p / "map", dirs_exist_ok=True)
+    shutil.copy(C.STATIC / "logo.svg", p / "logo.svg")
 
 
 def shell(o, up, title, body, head_extra=""):
@@ -99,6 +100,7 @@ def shell(o, up, title, body, head_extra=""):
                                      "(Nov-Feb); odds are shown for reference.</p>")
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
+<link rel=icon type="image/svg+xml" href="{up}logo.svg">
 {head_extra}<style>
 :root{{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}}}
@@ -110,7 +112,7 @@ td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} 
 .wrap{{overflow-x:auto}} {TREND_CSS} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
 {PLUME_CSS}{MAP_CSS}
 </style></head><body>
-<h1><a href="{up or './'}" style="text-decoration:none">Sawtooth Lookout</a></h1>
+<h1><a href="{up or './'}" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px"><img src="{up}logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>{o['init']}</b> 00 UTC ({sysline}). Week 2 = <b>{o['week2_dates'][0]} to {o['week2_dates'][1]}</b>.</p>
