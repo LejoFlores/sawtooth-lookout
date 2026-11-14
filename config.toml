@@ -2,7 +2,10 @@
 
 [source]
 gefs_forecast = "https://data.dynamical.org/noaa/gefs/forecast-35-day/latest.zarr"
-# ECMWF open data (CC BY 4.0), AWS mirror. ENS 0.25 deg, 51 members, 00 UTC to 360 h, so it covers days 1-15 only.
+# ECMWF ENS (CC BY 4.0) from the dynamical.org archive: tried first, one Zarr store like GEFS.
+ecmwf_forecast = "https://data.dynamical.org/ecmwf/ifs-ens/forecast-15-day-0-25-degree/latest.zarr"
+# Fallback: ECMWF open data GRIB on the AWS mirror (throttles bursts of requests with 503).
+# ENS 0.25 deg, 51 members, 00 UTC to 360 h, so it covers days 1-15 only.
 ecmwf_open = "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com"
 
 [basins]
