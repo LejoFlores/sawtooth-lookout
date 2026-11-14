@@ -27,25 +27,27 @@ def enabled(prefix="west"):
 
 def _shares(prefix, system, t0, T, P):
     clim = C.load_climate(f"{prefix}_{system}")
-    return C.shares(C.member_percentiles(T, P, *C.reference(clim, t0, "week2")))
+    pc = C.member_percentiles(T, P, *C.reference(clim, t0, "week2"))
+    return C.shares(pc), pc
 
 
-def make(t0, gefs, ecmwf=None, prefix="west"):
-    """gefs, ecmwf: (T[member, unit], P[member, unit]) for week 2 -> the product dict of a unit set."""
+def make(t0, gefs, ecmwf=None, prefix="west", daily=None):
+    """gefs, ecmwf: (T[member, unit], P[member, unit]) for week 2 -> the product dict of a unit set. With `daily`
+    ({system: daily precipitation [member, day, unit] in mm}) also returns {unit: {system: member rows}}."""
     units = pd.read_csv(C.STATIC / f"{prefix}_units.csv", dtype=str)
     ids = units.iloc[:, 0]
     own = (C.STATIC / f"{prefix}_calibration.csv").exists()
     cal = pd.read_csv(C.STATIC / (f"{prefix}_calibration.csv" if own else "calibration.csv"))
     sp = C.STATIC / f"{prefix}_scores.csv"
     sc = pd.read_csv(sp, dtype={"huc4": str}) if sp.exists() else None
-    sg = _shares(prefix, "gefs", t0, *gefs)
+    sg, pg = _shares(prefix, "gefs", t0, *gefs[:2])
     systems = {"gefs": int(gefs[0].shape[0])}
     if ecmwf is not None:
-        se = _shares(prefix, "ecmwf", t0, *ecmwf)
+        se, pe = _shares(prefix, "ecmwf", t0, *ecmwf[:2])
         systems["ecmwf"] = int(ecmwf[0].shape[0])
         sh, prod = {ev: (sg[ev] + se[ev]) / 2 for ev in C.EVENTS}, "week2"
     else:
-        se, sh, prod = None, sg, "week2_gefs"
+        se, pe, sh, prod = None, None, sg, "week2_gefs"
     sea = C.season(t0)
     base = cal[(cal["product"] == prod) & (cal.season == sea)].set_index("event")["base_rate"]
     roc = {} if sc is None else sc[(sc["product"] == prod) & (sc.season == sea)].set_index(["huc4", "event"])["roc"]
@@ -64,7 +66,14 @@ def make(t0, gefs, ecmwf=None, prefix="west"):
                                   base_rate=round(float(base.get(ev, np.nan)), 3),
                                   hindcast_roc=None if np.isnan(r) else round(float(r), 2))
         out["units"][h] = u
-    return out
+    if daily is None:
+        return out
+    mem = {}
+    for i, h in enumerate(ids):
+        mem[h] = {"gefs": C.member_rows(pg, i, daily.get("gefs"))}
+        if pe is not None:
+            mem[h]["ecmwf"] = C.member_rows(pe, i, daily.get("ecmwf"))
+    return out, mem
 
 
 def history_rows(o):
@@ -73,8 +82,15 @@ def history_rows(o):
 
 
 def run(ds, t0, ecmwf, newest=True, prefix="west"):
-    g = S.gefs_windows(ds, t0, {"week2": W2}, wname=f"{prefix}_gefs")["week2"]
-    o = make(t0, g, ecmwf, prefix)
+    detail = prefix == "huc8"                          # these units get a member-by-member page
+    wins = {"week2": W2, "fortnight": (W2[0], C.A["fortnight"][1])} if detail else {"week2": W2}
+    gw = S.gefs_windows(ds, t0, wins, wname=f"{prefix}_gefs")
+    g, mem = gw["week2"], None
+    if detail:
+        o, mem = make(t0, g, ecmwf, prefix, daily={"gefs": gw["daily_P"],
+                                                     "ecmwf": ecmwf[2] if ecmwf is not None and len(ecmwf) > 2 else None})
+    else:
+        o = make(t0, g, ecmwf, prefix)
     p = C.PRODUCTS / prefix
     p.mkdir(parents=True, exist_ok=True)
     day = C.PRODUCTS / f"{t0:%Y%m%d}"
@@ -85,6 +101,9 @@ def run(ds, t0, ecmwf, newest=True, prefix="west"):
         old = pd.read_csv(hp, dtype=str).rename(columns={"huc4": "unit"}).astype({"share": float, "odds": float})
         h = pd.concat([old[old.init != o["init"]], h]).sort_values(["init", "unit", "event"])
     h.to_csv(hp, index=False)
+    if mem is not None:
+        from . import unitpage
+        unitpage.write(o, mem, h, day / prefix, p if newest else None)
     if newest:
         json.dump(o, open(p / "latest.json", "w"))
         if prefix == "west":

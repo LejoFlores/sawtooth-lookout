@@ -462,7 +462,7 @@ def map_section(o, h, up):
         "<span style='background:#cbd5e1'></span>not forecast"
     return f"""<h2>Basins</h2>
 <p class=mut>Shaded by the highest week-2 odds among the alerting events. Click an outlined basin for its odds trend
-and member-by-member table. {"The lighter basins are other water-supply basins (HUC8s above NRCS forecast points, with snow sites): hover for their odds. They are experimental, use the calibration of the five outlined basins and open no alerts. " if s8 else ""}Grey basins are not forecast.</p>
+and member-by-member table. {"The lighter basins are other water-supply basins (HUC8s above NRCS forecast points, with snow sites): hover for their odds and click for their members. They are experimental and open no alerts. " if s8 else ""}Grey basins are not forecast.</p>
 <div id=map></div><p class="mut legend">{legend}</p>
 <script>
 (function(){{
@@ -480,7 +480,9 @@ and member-by-member table. {"The lighter basins are other water-supply basins (
         return s ? {{color: '#475569', weight: 0.7, fillColor: s.color, fillOpacity: 0.3}}
                  : {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}}; }},
       onEachFeature: function(f, l) {{ var s = S8[f.properties.huc8];
-        l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental. Skill is the ROC area in past forecasts: 0.5 none, 1 perfect.</i>' : 'Not forecast'), {{sticky: true}}); }}
+        l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental. Click for members. Skill is the ROC area in past forecasts: 0.5 none, 1 perfect.</i>' : 'Not forecast'), {{sticky: true}});
+        if (s) {{ l.on('click', function() {{ location.href = 'huc8/?b=' + f.properties.huc8; }});
+          l.on('mouseover', function() {{ l.setStyle({{weight: 2}}); }}); l.on('mouseout', function() {{ l.setStyle({{weight: 0.7}}); }}); }} }}
     }}).addTo(m);
     L.geoJSON(g[1], {{style: {{color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}}, interactive: false}}).addTo(m);
     var act = L.geoJSON(g[2], {{

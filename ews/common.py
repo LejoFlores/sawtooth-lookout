@@ -106,6 +106,18 @@ def shares(pc):
     return {ev: ((pc[s] <= t) if tail == "lo" else (pc[s] >= 1 - t)).mean(0) for ev, (s, tail) in EVENTS.items()}
 
 
+def member_rows(pc, bi, daily):
+    """Per member: week-2 percentiles and the alerting/watch events whose tail the member is in."""
+    t = A["tail"]
+    o = {k: np.round(pc[k][:, bi], 3).tolist() for k in ("T", "P", "WD", "WW")}
+    o["events"] = [[ev for ev, (st, tail) in EVENTS.items()
+                    if (pc[st][m, bi] <= t if tail == "lo" else pc[st][m, bi] >= 1 - t)]
+                   for m in range(pc["T"].shape[0])]
+    if daily is not None:
+        o["daily_P_mm"] = np.round(daily[:, :, bi], 2).tolist()
+    return o
+
+
 def _logit(p):
     p = np.clip(p, 0.02, 0.98)
     return np.log(p / (1 - p))

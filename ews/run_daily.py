@@ -46,18 +46,6 @@ def system_shares(clim, t0, T, P, window):
     return C.shares(pc), pc
 
 
-def member_rows(pc, bi, daily):
-    """Per member: week-2 percentiles and the alerting/watch events whose tail the member is in."""
-    t = C.A["tail"]
-    o = {k: np.round(pc[k][:, bi], 3).tolist() for k in ("T", "P", "WD", "WW")}
-    o["events"] = [[ev for ev, (st, tail) in C.EVENTS.items()
-                    if (pc[st][m, bi] <= t if tail == "lo" else pc[st][m, bi] >= 1 - t)]
-                   for m in range(pc["T"].shape[0])]
-    if daily is not None:
-        o["daily_P_mm"] = np.round(daily[:, :, bi], 2).tolist()
-    return o
-
-
 def make(t0, gefs, ecmwf=None):
     cal = C.load_calibration()
     cg = C.load_climate("gefs")
@@ -89,9 +77,9 @@ def make(t0, gefs, ecmwf=None):
             fo = float(C.calibrate(sf[ev][bi], ev, "fortnight_gefs", t0, cal))
             b["fortnight_gefs"][ev] = dict(share=round(float(sf[ev][bi]), 3), odds=round(fo, 3))
         # members for the page: week-2 percentiles of T, P and the warm-dry index, and daily precipitation (mm)
-        b["members"] = {"gefs": member_rows(pg, bi, gefs.get("daily_P"))}
+        b["members"] = {"gefs": C.member_rows(pg, bi, gefs.get("daily_P"))}
         if se is not None:
-            b["members"]["ecmwf"] = member_rows(pe, bi, ecmwf[2] if len(ecmwf) > 2 else None)
+            b["members"]["ecmwf"] = C.member_rows(pe, bi, ecmwf[2] if len(ecmwf) > 2 else None)
         b["week2_mean"] = dict(T_C=round(float(np.mean(gefs["week2"][0][:, bi])), 2),
                                P_mm=round(float(np.mean(gefs["week2"][1][:, bi])), 1))
         out["basins"][bn] = b
@@ -122,8 +110,9 @@ def run_one(ds, t0, use_ecmwf):
             try:
                 T, P, _, daily = S.ecmwf_window(t0, *W["week2"], workers=workers)
                 Ts, Ps = S.ecmwf_split(T), S.ecmwf_split(P)
-                ec = (Ts["ecmwf"], Ps["ecmwf"], S.ecmwf_split(daily)["ecmwf"])
-                ec_more = {k[:-6]: (Ts[k], Ps[k]) for k in Ts if k != "ecmwf"}
+                Ds = S.ecmwf_split(daily)
+                ec = (Ts["ecmwf"], Ps["ecmwf"], Ds["ecmwf"])
+                ec_more = {k[:-6]: (Ts[k], Ps[k], Ds[k]) for k in Ts if k != "ecmwf"}
                 break
             except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
                 print(f"ECMWF download failed ({workers} workers):", repr(e)[:300], flush=True)
