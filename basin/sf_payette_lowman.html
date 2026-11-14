@@ -1,10 +1,10 @@
 <!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>Sawtooth Lookout: SF Payette at Lowman</title>
-<link rel=icon type="image/svg+xml" href="../logo.svg">
+<link rel=icon type="image/svg+xml" href="../logo.svg"><link rel=stylesheet href="../vendor/inter/inter.css">
 <style>
 :root{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}
-body{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 Inter,system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}
 table{border-collapse:collapse;margin:8px 0 16px;width:100%} th,td{border:1px solid var(--line);padding:6px 8px;text-align:center}
 th{font-weight:600} td b{display:block;font-size:17px} td span{color:var(--mut);font-size:12px}
 td.hi{background:var(--hi)} td.hi b{color:var(--hib)} td.mid{background:var(--mid)} td.lo{background:var(--lo)}
@@ -21,12 +21,12 @@ padding:0 4px;margin-right:2px;font-weight:700} .key span{display:inline-block;p
 
 #map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
 .legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
-.leaflet-tooltip{font:13px/1.35 system-ui,sans-serif}
-.leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 system-ui,sans-serif;box-shadow:none;opacity:.92}
+.leaflet-tooltip{font:13px/1.35 Inter,system-ui,sans-serif}
+.leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 Inter,system-ui,sans-serif;box-shadow:none;opacity:.92}
 .leaflet-tooltip.sentinel:before{display:none} .legend i.sent{display:inline-block;width:14px;height:10px;margin:0 4px 0 12px;border:2.5px solid var(--fg);border-radius:2px;vertical-align:-1px}
 
 </style></head><body>
-<h1><a href="../" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px"><img src="../logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
+<h1><a href="../" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.015em"><img src="../logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>2026-11-13</b> 00 UTC (GEFS 31 members, ECMWF 50 members). Week 2 = <b>2026-11-20 to 2026-11-26</b>.</p>
