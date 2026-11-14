@@ -403,10 +403,33 @@ def write_archive(h):
 
 
 # ------------------------------------------------------------------------------------------------------------- map
+# Basemaps and overlays shared by the Idaho and West maps. All are public tile services that need no key: USGS The
+# National Map (public domain) and the Iowa Environmental Mesonet NEXRAD composite. The page works without them.
+BASE_JS = """
+  function slBase(m, dark, maxZoom) {
+    var B = 'https://basemap.nationalmap.gov/arcgis/rest/services/', att = 'Basemap: USGS The National Map';
+    function t(n, op) { return L.tileLayer(B + n + '/MapServer/tile/{z}/{y}/{x}', {maxZoom: maxZoom, maxNativeZoom: 16, opacity: op, attribution: att}); }
+    var bases = {'Shaded relief': t('USGSShadedReliefOnly', dark ? 0.35 : 0.6), 'Topographic': t('USGSTopo', dark ? 0.75 : 1),
+                 'Imagery': t('USGSImageryOnly', dark ? 0.7 : 0.9), 'No basemap': L.layerGroup()};
+    var R = 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/{z}/{x}/{y}.png';
+    var radar = L.tileLayer(R, {maxZoom: maxZoom, opacity: 0.7, zIndex: 450, pane: 'overlayPane',
+      attribution: 'Radar: NEXRAD composite, Iowa Environmental Mesonet'});
+    var over = {'Rivers and lakes': t('USGSHydroCached', 0.9), 'Radar now': radar};
+    var pick = 'Shaded relief';
+    try { var s = localStorage.getItem('sl-base'); if (s && bases[s]) pick = s; } catch (e) {}
+    bases[pick].addTo(m);
+    L.control.layers(bases, over, {collapsed: true, position: 'topright'}).addTo(m);
+    m.on('baselayerchange', function(e) { try { localStorage.setItem('sl-base', e.name); } catch (x) {} });
+    setInterval(function() { if (m.hasLayer(radar)) radar.setUrl(R + '?t=' + Date.now()); }, 300000);
+  }
+"""
+
 MAP_CSS = """
 #map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
 .legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
 .leaflet-tooltip{font:13px/1.35 system-ui,sans-serif}
+.leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 system-ui,sans-serif;box-shadow:none;opacity:.92}
+.leaflet-tooltip.sentinel:before{display:none} .legend i.sent{display:inline-block;width:14px;height:10px;margin:0 4px 0 12px;border:2.5px solid var(--fg);border-radius:2px;vertical-align:-1px}
 """
 LEVEL = {"hi": ("#dc2626", "at or above the alert level"), "mid": ("#f59e0b", "elevated (1.5x usual or more)"),
          "lo": ("#0f766e", "near normal")}
@@ -459,10 +482,11 @@ def map_section(o, h, up):
     st = json.dumps(basin_status(o, h))
     s8 = huc8_status(o)
     legend = "".join(f"<span style='background:{c}'></span>{t}" for c, t in LEVEL.values()) + \
-        "<span style='background:#cbd5e1'></span>not forecast"
+        "<span style='background:#cbd5e1'></span>not forecast<i class=sent></i>sentinel basin (alerts open here)"
     return f"""<h2>Basins</h2>
-<p class=mut>Shaded by the highest week-2 odds among the alerting events. Click an outlined basin for its odds trend
-and member-by-member table. {"The lighter basins are other water-supply basins (HUC8s above NRCS forecast points, with snow sites): hover for their odds and click for their members. They are experimental and open no alerts. " if s8 else ""}Grey basins are not forecast.</p>
+<p class=mut>Shaded by the highest week-2 odds among the alerting events. The five sentinel basins have a heavy
+outline and a name tag: alerts open only for them. Click any shaded basin for its odds trend and member-by-member
+table. {"The other shaded basins are water-supply HUC8s (above NRCS forecast points, with snow sites); they are experimental. " if s8 else ""}Grey basins are not forecast. Use the layers button on the map to change the basemap or add live radar.</p>
 <div id=map></div><p class="mut legend">{legend}</p>
 <script>
 (function(){{
@@ -470,14 +494,12 @@ and member-by-member table. {"The lighter basins are other water-supply basins (
   var S = {st}, S8 = {json.dumps(s8)}, up = {json.dumps(up)};
   var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([45.0, -114.6], 6);
-  // USGS National Map: public, no API key. The page works without it if the tiles fail to load.
-  L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{{z}}/{{y}}/{{x}}',
-    {{maxZoom: 10, opacity: dark ? 0.75 : 1, attribution: 'Basemap: USGS The National Map'}}).addTo(m);
+{BASE_JS}  slBase(m, dark, 10);
   function get(u) {{ return fetch(up + u).then(function(r) {{ return r.json(); }}); }}
   Promise.all([get('map/others.geojson'), get('map/idaho.geojson'), get('map/active.geojson')]).then(function(g) {{
     L.geoJSON(g[0], {{
       style: function(f) {{ var s = S8[f.properties.huc8];
-        return s ? {{color: '#475569', weight: 0.7, fillColor: s.color, fillOpacity: 0.3}}
+        return s ? {{color: '#334155', weight: 0.7, fillColor: s.color, fillOpacity: 0.55}}
                  : {{color: '#94a3b8', weight: 0.7, fillColor: '#cbd5e1', fillOpacity: 0.35, dashArray: '3'}}; }},
       onEachFeature: function(f, l) {{ var s = S8[f.properties.huc8];
         l.bindTooltip('<b>' + f.properties.name + '</b><br>' + (s ? s.lines.join('<br>') + '<br><i>Experimental. Click for members. Skill is the ROC area in past forecasts: 0.5 none, 1 perfect.</i>' : 'Not forecast'), {{sticky: true}});
@@ -485,16 +507,22 @@ and member-by-member table. {"The lighter basins are other water-supply basins (
           l.on('mouseover', function() {{ l.setStyle({{weight: 2}}); }}); l.on('mouseout', function() {{ l.setStyle({{weight: 0.7}}); }}); }} }}
     }}).addTo(m);
     L.geoJSON(g[1], {{style: {{color: dark ? '#e2e8f0' : '#0f172a', weight: 2, fill: false}}, interactive: false}}).addTo(m);
+    L.geoJSON(g[2], {{style: {{color: '#fff', weight: 6, fill: false}}, interactive: false}}).addTo(m);       // casing
     var act = L.geoJSON(g[2], {{
-      style: function(f) {{ var s = S[f.properties.basin]; return {{color: '#0f172a', weight: 1.5, fillColor: s.color, fillOpacity: 0.55}}; }},
+      style: function(f) {{ var s = S[f.properties.basin]; return {{color: '#0f172a', weight: 3, fillColor: s.color, fillOpacity: 0.55}}; }},
       onEachFeature: function(f, l) {{
         var s = S[f.properties.basin];
         l.bindTooltip('<b>' + s.name + '</b><br>' + s.lines.join('<br>') + '<br><i>Click for details</i>', {{sticky: true}});
         l.on('click', function() {{ location.href = 'basin/' + f.properties.basin + '.html'; }});
-        l.on('mouseover', function() {{ l.setStyle({{weight: 3}}); }});
-        l.on('mouseout', function() {{ l.setStyle({{weight: 1.5}}); }});
+        l.on('mouseover', function() {{ l.setStyle({{weight: 4.5}}); }});
+        l.on('mouseout', function() {{ l.setStyle({{weight: 3}}); }});
       }}
     }}).addTo(m);
+    act.eachLayer(function(l) {{                       // a name tag on each sentinel basin
+      var s = S[l.feature.properties.basin], c = l.getBounds().getCenter();
+      L.tooltip({{permanent: true, direction: 'center', className: 'sentinel', interactive: false}})
+        .setLatLng(c).setContent(s.name.replace(/ (at|near|above) .*/, '')).addTo(m);
+    }});
     m.fitBounds(L.geoJSON(g[1]).getBounds(), {{padding: [4, 4]}});
   }});
 }})();
