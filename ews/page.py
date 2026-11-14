@@ -90,6 +90,7 @@ def copy_assets(p):
     """Leaflet and the map layers, at the products root (shared by every day's pages)."""
     import shutil
     shutil.copytree(C.HERE / "vendor" / "leaflet", p / "vendor" / "leaflet", dirs_exist_ok=True)
+    shutil.copytree(C.HERE / "vendor" / "inter", p / "vendor" / "inter", dirs_exist_ok=True)
     shutil.copytree(C.STATIC / "map", p / "map", dirs_exist_ok=True)
     shutil.copy(C.STATIC / "logo.svg", p / "logo.svg")
 
@@ -100,11 +101,11 @@ def shell(o, up, title, body, head_extra=""):
                                      "(Nov-Feb); odds are shown for reference.</p>")
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
-<link rel=icon type="image/svg+xml" href="{up}logo.svg">
+<link rel=icon type="image/svg+xml" href="{up}logo.svg"><link rel=stylesheet href="{up}vendor/inter/inter.css">
 {head_extra}<style>
 :root{{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}}}
-body{{background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}}
+body{{background:var(--bg);color:var(--fg);font:15px/1.45 Inter,system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}}
 table{{border-collapse:collapse;margin:8px 0 16px;width:100%}} th,td{{border:1px solid var(--line);padding:6px 8px;text-align:center}}
 th{{font-weight:600}} td b{{display:block;font-size:17px}} td span{{color:var(--mut);font-size:12px}}
 td.hi{{background:var(--hi)}} td.hi b{{color:var(--hib)}} td.mid{{background:var(--mid)}} td.lo{{background:var(--lo)}}
@@ -112,7 +113,7 @@ td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} 
 .wrap{{overflow-x:auto}} {TREND_CSS} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
 {PLUME_CSS}{MAP_CSS}
 </style></head><body>
-<h1><a href="{up or './'}" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px"><img src="{up}logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
+<h1><a href="{up or './'}" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.015em"><img src="{up}logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>{o['init']}</b> 00 UTC ({sysline}). Week 2 = <b>{o['week2_dates'][0]} to {o['week2_dates'][1]}</b>.</p>
@@ -396,7 +397,7 @@ def write_archive(h):
         rows.append(f"<tr><td>{link}</td><td style='text-align:left'>{html.escape(al) or 'none'}</td></tr>")
     (p / "archive.html").write_text(
         "<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,"
-        "initial-scale=1'><title>Sawtooth Lookout archive</title><style>body{font:15px/1.45 system-ui,sans-serif;"
+        "initial-scale=1'><title>Sawtooth Lookout archive</title><link rel=stylesheet href='vendor/inter/inter.css'><style>body{font:15px/1.45 Inter,system-ui,sans-serif;"
         "margin:0 auto;max-width:900px;padding:16px} table{border-collapse:collapse;width:100%} td,th{border:1px "
         "solid #e2e8f0;padding:6px 8px} @media (prefers-color-scheme:dark){body{background:#0b1220;color:#e2e8f0}"
         "a{color:#93c5fd} td,th{border-color:#1f2937}}</style></head><body><h1><a href='./'>Sawtooth Lookout</a>"
@@ -429,8 +430,8 @@ BASE_JS = """
 MAP_CSS = """
 #map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
 .legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
-.leaflet-tooltip{font:13px/1.35 system-ui,sans-serif}
-.leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 system-ui,sans-serif;box-shadow:none;opacity:.92}
+.leaflet-tooltip{font:13px/1.35 Inter,system-ui,sans-serif}
+.leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 Inter,system-ui,sans-serif;box-shadow:none;opacity:.92}
 .leaflet-tooltip.sentinel:before{display:none} .legend i.sent{display:inline-block;width:14px;height:10px;margin:0 4px 0 12px;border:2.5px solid var(--fg);border-radius:2px;vertical-align:-1px}
 """
 LEVEL = {"hi": ("#dc2626", "at or above the alert level"), "mid": ("#f59e0b", "elevated (1.5x usual or more)"),
