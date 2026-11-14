@@ -15,7 +15,7 @@ Payette at Lowman, Weiser near Weiser, Boise above Lucky Peak, Big Wood at Haile
 ## Method
 
 1. Take the newest 00 UTC start that GEFS (31 members, via [dynamical.org](https://dynamical.org)) has through day
-   21. Add ECMWF ENS (50 members, ECMWF open data on AWS) for the same start when it is available; it goes to day 15.
+   21. Add ECMWF ENS (50 members, from the dynamical.org archive, falling back to ECMWF open data on AWS) for the same start when it is available; it goes to day 15.
 2. Compute basin-area-weighted week-2 mean 2 m temperature and total precipitation for each member.
 3. Rank each member within its own model's reforecast climate (GEFSv12 2000-2019; ECMWF CY49R1 2006-2025), using
    starts within 21 days of the date. The warm-dry index is z(T) − z(√P) and the
@@ -80,7 +80,7 @@ Read these as rough guides. Tail events are rare, so the samples are small.
 |---|---|
 | `ews/run_daily.py` | Daily run: `YYYYMMDD/` (alarms.json, page, figure), `latest.json`, `history.csv`, `index.html`, `archive.html` |
 | `ews/notify.py` | Opens, comments on and closes alert issues |
-| `ews/sources.py` | GEFS (Zarr) and ECMWF open data (GRIB byte ranges) readers |
+| `ews/sources.py` | GEFS and ECMWF readers (dynamical.org Zarr; ECMWF open data GRIB byte ranges as fallback) |
 | `ews/page.py` | The web pages: map landing page, basin pages with Swain-style member tables, archive |
 | `scripts/build_map.py` | Builds the map layers in `static/map/` from USGS WBD and us-atlas |
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause), served with the site |

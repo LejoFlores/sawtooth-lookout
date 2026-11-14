@@ -73,9 +73,16 @@ def main():
             print(t0.date(), "GEFS failed", repr(e)[:200], flush=True)
             continue
         products = {"week2_gefs": R.make(t0, gefs, None)}
-        if want_ec and S.ecmwf_available(t0):
+        got = None
+        if want_ec:
             try:
-                T, P, _, _ = S.ecmwf_window(t0, *R.W["week2"])
+                got = S.ecmwf_zarr_window(t0, *R.W["week2"])
+            except Exception:  # noqa: BLE001 - not in the archive: try the GRIB mirror below
+                pass
+        if got is not None or (want_ec and S.ecmwf_available(t0)):
+            try:
+                T, P, _, _ = got or S.ecmwf_window(t0, *R.W["week2"])
+                T, P = S.ecmwf_split(T)["ecmwf"], S.ecmwf_split(P)["ecmwf"]
                 products["week2"] = R.make(t0, gefs, (T, P))
             except Exception as e:  # noqa: BLE001
                 print(t0.date(), "ECMWF failed", repr(e)[:200], flush=True)

@@ -103,21 +103,29 @@ def run_one(ds, t0, use_ecmwf):
     print("GEFS start", t0.date(), flush=True)
     gefs = S.gefs_windows(ds, t0, W)
     ec, ec_more = None, {}
-    if use_ecmwf and S.ecmwf_available(t0):
-        # The S3 mirror throttles (503) bursts of range requests: retry the whole download more gently before
-        # falling back to GEFS only.
-        for attempt, workers in enumerate((8, 3, 1)):
-            try:
-                T, P, _, daily = S.ecmwf_window(t0, *W["week2"], workers=workers)
-                Ts, Ps = S.ecmwf_split(T), S.ecmwf_split(P)
-                Ds = S.ecmwf_split(daily)
-                ec = (Ts["ecmwf"], Ps["ecmwf"], Ds["ecmwf"])
-                ec_more = {k[:-6]: (Ts[k], Ps[k], Ds[k]) for k in Ts if k != "ecmwf"}
-                break
-            except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
-                print(f"ECMWF download failed ({workers} workers):", repr(e)[:300], flush=True)
-                if attempt < 2:
-                    time.sleep(60)
+    if use_ecmwf:
+        got = None
+        try:                                           # dynamical.org archive first: one store, a few seconds
+            got = S.ecmwf_zarr_window(t0, *W["week2"])
+            print("ECMWF from the dynamical.org archive", flush=True)
+        except Exception as e:  # noqa: BLE001 - absent, incomplete or unreachable: try the GRIB mirror
+            print("ECMWF archive unavailable:", repr(e)[:300], flush=True)
+        if got is None and S.ecmwf_available(t0):
+            # The S3 mirror throttles (503) bursts of range requests: retry the whole download more gently before
+            # falling back to GEFS only.
+            for attempt, workers in enumerate((8, 3, 1)):
+                try:
+                    got = S.ecmwf_window(t0, *W["week2"], workers=workers)
+                    break
+                except Exception as e:  # noqa: BLE001 - a failed ECMWF download falls back to GEFS only
+                    print(f"ECMWF download failed ({workers} workers):", repr(e)[:300], flush=True)
+                    if attempt < 2:
+                        time.sleep(60)
+        if got is not None:
+            T, P, _, daily = got
+            Ts, Ps, Ds = S.ecmwf_split(T), S.ecmwf_split(P), S.ecmwf_split(daily)
+            ec = (Ts["ecmwf"], Ps["ecmwf"], Ds["ecmwf"])
+            ec_more = {k[:-6]: (Ts[k], Ps[k], Ds[k]) for k in Ts if k != "ecmwf"}
     print("ECMWF", "yes" if ec is not None else "missing, GEFS only", flush=True)
     o = make(t0, gefs, ec)
     C.PRODUCTS.mkdir(parents=True, exist_ok=True)

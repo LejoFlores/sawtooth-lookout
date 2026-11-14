@@ -131,6 +131,47 @@ def _decode_basins(buf):
     return int(num), np.concatenate([C.basin_mean(v, lat, lon, w) for w in ECMWF_SETS])
 
 
+def _ecmwf_zarr():
+    import xarray as xr
+    ds = xr.open_zarr(C.CFG["source"]["ecmwf_forecast"], storage_options=SO, chunks=None)
+    if float(ds.longitude.max()) > 180:
+        ds = ds.assign_coords(longitude=((ds.longitude + 180) % 360) - 180).sortby("longitude")
+    return ds
+
+
+def ecmwf_zarr_window(t0, a, b):
+    """The same ensemble from the dynamical.org archive (one Zarr, no per-message requests), reduced like
+    ecmwf_window and returning the same tuple. Raises LookupError when the start is absent or incomplete.
+    Precipitation is the mean rate over each step; the perturbed members 1-50 are kept, as in the GRIB path."""
+    assert b <= 15
+    ds = _ecmwf_zarr()
+    t0 = np.datetime64(t0, "ns")
+    if t0 not in ds.init_time.values:
+        raise LookupError(f"ECMWF {t0} not in the dynamical.org archive")
+    box = [C.load_weights(w)[:2] for w in ECMWF_SETS]
+    la0, la1 = min(x[0].min() for x in box), max(x[0].max() for x in box)
+    lo0, lo1 = min(x[1].min() for x in box), max(x[1].max() for x in box)
+    lats = ds.latitude.values
+    lsel = slice(la1 + 0.01, la0 - 0.01) if lats[0] > lats[-1] else slice(la0 - 0.01, la1 + 0.01)
+    sub = ds.sel(init_time=t0, latitude=lsel, longitude=slice(lo0 - 0.01, lo1 + 0.01))
+    sub = sub.sel(ensemble_member=sub.ensemble_member[sub.ensemble_member > 0],
+                  lead_time=sub.lead_time[sub.lead_time <= np.timedelta64(360, "h")])
+    lh = (sub.lead_time.values / np.timedelta64(1, "h")).astype(float)
+    tsel = (lh > 24 * (a - 1)) & (lh <= 24 * b) & (lh % 6 == 0)
+    assert tsel.sum() == 4 * (b - a + 1), f"ECMWF: {tsel.sum()} temperature steps"
+    T = sub.temperature_2m.isel(lead_time=np.where(tsel)[0]).transpose("ensemble_member", "lead_time", "latitude", "longitude").load()
+    P = sub.precipitation_surface.transpose("ensemble_member", "lead_time", "latitude", "longitude").load()
+    if not (np.isfinite(T.values).all() and np.isfinite(P.values[:, 1:]).all()):
+        raise LookupError(f"ECMWF {t0} incomplete in the dynamical.org archive")
+    la, lo = T.latitude.values, T.longitude.values
+    Tb = np.concatenate([C.basin_mean(T.values, la, lo, w) for w in ECMWF_SETS], -1)       # [member, lead, unit]
+    Pb = np.concatenate([C.basin_mean(np.nan_to_num(P.values), la, lo, w) for w in ECMWF_SETS], -1)
+    amt = Pb * np.diff(lh, prepend=0.0)[None, :, None] * 3600.0                             # rate over the step -> mm
+    day = np.ceil(lh / 24).astype(int)
+    daily = np.stack([amt[:, day == d].sum(1) for d in range(1, 16)], 1)                    # [member, day 1-15, unit]
+    return Tb.mean(1), daily[:, a - 1:b].sum(1), sub.ensemble_member.values, daily
+
+
 def ecmwf_window(t0, a, b, workers=8):
     """ECMWF ENS open data for window days a..b (b <= 15) ->
     (T[member, unit], P[member, unit], members, daily_P[member, day 1-15, unit] in mm). Units are the Idaho basins
