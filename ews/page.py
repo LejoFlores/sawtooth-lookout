@@ -95,6 +95,13 @@ def copy_assets(p):
     shutil.copy(C.STATIC / "logo.svg", p / "logo.svg")
 
 
+# Dark is the default; a visitor's choice of the light theme is remembered. Runs in <head>, before first paint.
+THEME_JS = """<script>(function(){var t='dark';try{t=localStorage.getItem('sl-theme')||'dark'}catch(e){}
+document.documentElement.dataset.theme=t;window.slDark=t!=='light';
+window.slTheme=function(){try{localStorage.setItem('sl-theme',window.slDark?'light':'dark')}catch(e){}location.reload()}})();</script>
+"""
+
+
 def shell(o, up, title, body, head_extra=""):
     sysline = ", ".join(f"{k.upper()} {v} members" for k, v in o["systems"].items())
     note = "" if o["alerting"] else (f"<p class=warn>{o['season']} is outside the alerting season "
@@ -102,18 +109,25 @@ def shell(o, up, title, body, head_extra=""):
     return f"""<!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title>
 <link rel=icon type="image/svg+xml" href="{up}logo.svg"><link rel=stylesheet href="{up}vendor/inter/inter.css">
-{head_extra}<style>
-:root{{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0}}
-@media (prefers-color-scheme:dark){{:root{{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937}}}}
+{THEME_JS}{head_extra}<style>
+:root{{--bg:#0b1220;--fg:#e2e8f0;--mut:#94a3b8;--hi:#4c1d1d;--hib:#fca5a5;--mid:#3f3413;--lo:#111827;--line:#1f2937;color-scheme:dark}}
+:root[data-theme=light]{{--bg:#fff;--fg:#0f172a;--mut:#64748b;--hi:#fee2e2;--hib:#b91c1c;--mid:#fef3c7;--lo:#f8fafc;--line:#e2e8f0;color-scheme:light}}
 body{{background:var(--bg);color:var(--fg);font:15px/1.45 Inter,system-ui,sans-serif;margin:0 auto;max-width:1100px;padding:16px}}
 table{{border-collapse:collapse;margin:8px 0 16px;width:100%}} th,td{{border:1px solid var(--line);padding:6px 8px;text-align:center}}
 th{{font-weight:600}} td b{{display:block;font-size:17px}} td span{{color:var(--mut);font-size:12px}}
 td.hi{{background:var(--hi)}} td.hi b{{color:var(--hib)}} td.mid{{background:var(--mid)}} td.lo{{background:var(--lo)}}
 td.muted{{opacity:.6}} .mut,small{{color:var(--mut)}} .warn{{color:var(--hib)}} img{{max-width:100%}}
+.top{{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}}
+.top h1{{margin:.3em 0;font-size:clamp(30px,5.2vw,46px);line-height:1.1}}
+.top h1 a{{text-decoration:none;display:inline-flex;align-items:center;gap:16px;font-weight:700;letter-spacing:-.02em}}
+.top h1 img{{width:clamp(52px,8vw,72px);height:auto}}
+#theme{{font:inherit;font-size:13px;padding:5px 12px;border:1px solid var(--line);border-radius:16px;background:var(--lo);color:var(--fg);cursor:pointer}}
 .wrap{{overflow-x:auto}} {TREND_CSS} .disc{{border:1px solid var(--hib);border-radius:6px;padding:8px 10px}} a{{color:inherit}}
 {PLUME_CSS}{MAP_CSS}
 </style></head><body>
-<h1><a href="{up or './'}" style="text-decoration:none;display:inline-flex;align-items:center;gap:12px;font-weight:700;letter-spacing:-.015em"><img src="{up}logo.svg" alt="" width=44 height=44>Sawtooth Lookout</a></h1>
+<header class=top><h1><a href="{up or './'}"><img src="{up}logo.svg" alt="" width=72 height=72>Sawtooth Lookout</a></h1>
+<button id=theme type=button onclick="slTheme()" aria-label="Switch between dark and light theme"></button></header>
+<script>(function(){{var b=document.getElementById('theme');b.textContent=document.documentElement.dataset.theme==='light'?'Dark theme':'Light theme';}})();</script>
 <p class=mut>Week-2 snow-drought early warning for Idaho basins · Boise State University</p>
 <p class=disc><b>Experimental research product. Not an official forecast.</b> For official forecasts and warnings, see the <a href="https://www.weather.gov/">National Weather Service</a>. Provided as is, without warranty.</p>
 <p>Start <b>{o['init']}</b> 00 UTC ({sysline}). Week 2 = <b>{o['week2_dates'][0]} to {o['week2_dates'][1]}</b>.</p>
@@ -151,7 +165,8 @@ def render_basin(o, h, bn, up):
 
 def render(o, h, up):
     frows = "".join(f"<tr><th>{html.escape(b['name'])}</th>" +
-                    "".join(f"<td>{b['fortnight_gefs'][e]['odds']:.0%}</td>" for e in C.A["events"]) + "</tr>"
+                    "".join("<td class=mut>pending</td>" if b["fortnight_gefs"][e]["odds"] is None else
+                            f"<td>{b['fortnight_gefs'][e]['odds']:.0%}</td>" for e in C.A["events"]) + "</tr>"
                     for b in o["basins"].values())
     alerts = ("<ul>" + "".join(f"<li><a href='basin/{a['basin']}.html'><b>{html.escape(C.CFG['basins'][a['basin']])}</b></a>: "
                                f"{EV_LABEL[a['event']]} week 2, odds {a['odds']:.0%}</li>" for a in o["alerts"]) + "</ul>") \
@@ -166,7 +181,8 @@ def render(o, h, up):
 {trend_section(o, h)}
 <img src="alarms.png" alt="Member percentiles and recent odds by basin">
 <h2>Days 8-21 (GEFS only, heads-up)</h2>
-<p class=mut>ECMWF open data stops at day 15, so the fortnight uses GEFS alone. Its hindcast skill is lower; it never alerts.</p>
+<p class=mut>ECMWF open data stops at day 15, so the fortnight uses GEFS alone. Its hindcast skill is lower; it never alerts.
+GEFS days 17-35 are posted about a day after the rest, so this table can read "pending" on the newest start.</p>
 <div class=wrap><table><tr><th>Basin</th>{''.join(f'<th>{EV_LABEL[e]}</th>' for e in C.A['events'])}</tr>{frows}</table></div>
 <h2>How this works</h2>
 <p class=mut>Each member's basin-mean week-2 temperature and precipitation is ranked within its own model's reforecast
@@ -397,10 +413,13 @@ def write_archive(h):
         rows.append(f"<tr><td>{link}</td><td style='text-align:left'>{html.escape(al) or 'none'}</td></tr>")
     (p / "archive.html").write_text(
         "<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content='width=device-width,"
-        "initial-scale=1'><title>Sawtooth Lookout archive</title><link rel=stylesheet href='vendor/inter/inter.css'><style>body{font:15px/1.45 Inter,system-ui,sans-serif;"
-        "margin:0 auto;max-width:900px;padding:16px} table{border-collapse:collapse;width:100%} td,th{border:1px "
-        "solid #e2e8f0;padding:6px 8px} @media (prefers-color-scheme:dark){body{background:#0b1220;color:#e2e8f0}"
-        "a{color:#93c5fd} td,th{border-color:#1f2937}}</style></head><body><h1><a href='./'>Sawtooth Lookout</a>"
+        "initial-scale=1'><title>Sawtooth Lookout archive</title><link rel=stylesheet href='vendor/inter/inter.css'>"
+        + THEME_JS + "<style>:root{color-scheme:dark} :root[data-theme=light]{color-scheme:light} "
+        "body{font:15px/1.45 Inter,system-ui,sans-serif;margin:0 auto;max-width:900px;padding:16px;"
+        "background:#0b1220;color:#e2e8f0} table{border-collapse:collapse;width:100%} td,th{border:1px "
+        "solid #1f2937;padding:6px 8px} a{color:#93c5fd} [data-theme=light] body{background:#fff;color:#0f172a} "
+        "[data-theme=light] a{color:#1d4ed8} [data-theme=light] td,[data-theme=light] th{border-color:#e2e8f0}"
+        "</style></head><body><h1><a href='./'>Sawtooth Lookout</a>"
         " archive</h1><p><b>Experimental research product. Not an official forecast.</b></p><table><tr><th>Start"
         "</th><th>Alerts (week-2 odds)</th></tr>" + "".join(rows) + "</table></body></html>")
 
@@ -428,7 +447,9 @@ BASE_JS = """
 """
 
 MAP_CSS = """
-#map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}
+#map{height:560px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px;background:var(--lo)}
+.leaflet-container{background:var(--lo)} :root:not([data-theme=light]) .leaflet-bar a,:root:not([data-theme=light]) .leaflet-control-layers,:root:not([data-theme=light]) .leaflet-control-attribution{background:#1f2937;color:#e2e8f0;border-color:#374151}
+:root:not([data-theme=light]) .leaflet-control-attribution a{color:#93c5fd}
 .legend span{display:inline-block;width:12px;height:12px;border-radius:2px;margin:0 4px 0 12px;vertical-align:-1px}
 .leaflet-tooltip{font:13px/1.35 Inter,system-ui,sans-serif}
 .leaflet-tooltip.sentinel{background:#0f172a;color:#fff;border:0;border-radius:3px;padding:1px 6px;font:600 11px/1.5 Inter,system-ui,sans-serif;box-shadow:none;opacity:.92}
@@ -495,7 +516,7 @@ table. {"The other shaded basins are water-supply HUC8s (above NRCS forecast poi
 (function(){{
   if (!window.L) return;
   var S = {st}, S8 = {json.dumps(s8)}, up = {json.dumps(up)};
-  var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  var dark = window.slDark;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([45.0, -114.6], 6);
 {BASE_JS}  slBase(m, dark, 10);
   function get(u) {{ return fetch(up + u).then(function(r) {{ return r.json(); }}); }}

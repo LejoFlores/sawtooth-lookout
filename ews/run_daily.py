@@ -31,13 +31,13 @@ def pick_start(ds, init):
     have = have[have.hour == 0]
     if init != "latest":
         t0 = pd.Timestamp(init)
-        if t0 not in have or not S.gefs_complete(ds, t0, W["fortnight"][1]):
-            raise SystemExit(f"GEFS start {t0.date()} missing or incomplete through day {W['fortnight'][1]}")
+        if t0 not in have or not S.gefs_complete(ds, t0, W["week2"][1]):
+            raise SystemExit(f"GEFS start {t0.date()} missing or incomplete through day {W['week2'][1]}")
         return t0
     for t0 in have[::-1][:4]:
-        if S.gefs_complete(ds, t0, W["fortnight"][1]):
+        if S.gefs_complete(ds, t0, W["week2"][1]):     # week 2 drives the alerts; days 17-35 arrive about a day later
             return t0
-    raise SystemExit("no GEFS start among the last four is complete through day 21")
+    raise SystemExit(f"no GEFS start among the last four is complete through day {W['week2'][1]}")
 
 
 def system_shares(clim, t0, T, P, window):
@@ -50,7 +50,7 @@ def make(t0, gefs, ecmwf=None):
     cal = C.load_calibration()
     cg = C.load_climate("gefs")
     sg, pg = system_shares(cg, t0, *gefs["week2"], "week2")
-    sf, _ = system_shares(cg, t0, *gefs["fortnight"], "fortnight")
+    sf = system_shares(cg, t0, *gefs["fortnight"], "fortnight")[0] if "fortnight" in gefs else None   # not in yet
     systems = {"gefs": int(gefs["week2"][0].shape[0])}
     if ecmwf is not None:
         se, pe = system_shares(C.load_climate("ecmwf"), t0, ecmwf[0], ecmwf[1], "week2")
@@ -74,8 +74,11 @@ def make(t0, gefs, ecmwf=None):
                                   share_ecmwf=None if se is None else round(float(se[ev][bi]), 3),
                                   base_rate=round(float(base.get(ev, np.nan)), 3),
                                   alert=bool(out["alerting"] and ev in C.A["events"] and odds >= C.A["alert_odds"]))
-            fo = float(C.calibrate(sf[ev][bi], ev, "fortnight_gefs", t0, cal))
-            b["fortnight_gefs"][ev] = dict(share=round(float(sf[ev][bi]), 3), odds=round(fo, 3))
+            if sf is None:
+                b["fortnight_gefs"][ev] = dict(share=None, odds=None)
+            else:
+                fo = float(C.calibrate(sf[ev][bi], ev, "fortnight_gefs", t0, cal))
+                b["fortnight_gefs"][ev] = dict(share=round(float(sf[ev][bi]), 3), odds=round(fo, 3))
         # members for the page: week-2 percentiles of T, P and the warm-dry index, and daily precipitation (mm)
         b["members"] = {"gefs": C.member_rows(pg, bi, gefs.get("daily_P"))}
         if se is not None:
@@ -101,7 +104,14 @@ def history_rows(o):
 
 def run_one(ds, t0, use_ecmwf):
     print("GEFS start", t0.date(), flush=True)
-    gefs = S.gefs_windows(ds, t0, W)
+    # The extended GEFS (days 17-35) is posted about a day after days 1-16: run on week 2 as soon as it is in, and
+    # add the fortnight only when its days are there.
+    if S.gefs_complete(ds, t0, W["fortnight"][1]):
+        days, gefs = W["fortnight"][1], S.gefs_windows(ds, t0, W)
+    else:
+        days = 16 if S.gefs_complete(ds, t0, 16) else W["week2"][1]
+        gefs = S.gefs_windows(ds, t0, {"week2": W["week2"]}, days=days)
+        print(f"GEFS complete through day {days} only: fortnight pending", flush=True)
     ec, ec_more = None, {}
     if use_ecmwf:
         got = None
@@ -146,7 +156,7 @@ def run_one(ds, t0, use_ecmwf):
     for prefix in ("huc8", "west"):                    # extra unit sets never block the Idaho products
         try:
             if west.enabled(prefix):
-                west.run(ds, t0, ec_more.get(prefix) if ec is not None else None, newest, prefix)
+                west.run(ds, t0, ec_more.get(prefix) if ec is not None else None, newest, prefix, days)
         except Exception as e:  # noqa: BLE001
             print(f"{prefix} units failed:", repr(e)[:500], flush=True)
     from . import page

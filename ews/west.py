@@ -81,10 +81,11 @@ def history_rows(o):
                          for h, u in o["units"].items() for ev, v in u["week2"].items()])
 
 
-def run(ds, t0, ecmwf, newest=True, prefix="west"):
+def run(ds, t0, ecmwf, newest=True, prefix="west", days=None):
+    """`days`: last GEFS forecast day that is in (default: the fortnight's end), for the member tables."""
     detail = prefix == "huc8"                          # these units get a member-by-member page
-    wins = {"week2": W2, "fortnight": (W2[0], C.A["fortnight"][1])} if detail else {"week2": W2}
-    gw = S.gefs_windows(ds, t0, wins, wname=f"{prefix}_gefs")
+    gw = S.gefs_windows(ds, t0, {"week2": W2}, wname=f"{prefix}_gefs",
+                        days=(days or C.A["fortnight"][1]) if detail else None)
     g, mem = gw["week2"], None
     if detail:
         o, mem = make(t0, g, ecmwf, prefix, daily={"gefs": gw["daily_P"],
@@ -154,7 +155,7 @@ background:var(--lo);color:var(--fg);cursor:pointer}} .evbtn button.on{{backgrou
   if (!window.L) return;
   var S = {data}, LV = {lv}, HI = {HI}, EV = {json.dumps(o['events'])}, LAB = {json.dumps({e: Pg.EV_LABEL[e] for e in o['events']})};
   var COL = {json.dumps({k: v[0] for k, v in Pg.LEVEL.items()})}, sel = 'all', layer;
-  var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  var dark = window.slDark;
   var m = L.map('map', {{scrollWheelZoom: false, zoomSnap: 0.25}}).setView([41, -114], 5);
 {Pg.BASE_JS}  slBase(m, dark, 8);
   function level(v) {{ return v.odds === null ? null : v.odds >= HI ? 'hi' : v.odds >= LV ? 'mid' : 'lo'; }}
