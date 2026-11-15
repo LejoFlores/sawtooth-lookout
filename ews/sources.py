@@ -33,13 +33,13 @@ def gefs_complete(ds, t0, day):
     return bool(np.isfinite(v.load().values))
 
 
-def gefs_windows(ds, t0, windows, wname="gefs"):
+def gefs_windows(ds, t0, windows, wname="gefs", days=None):
     """-> {window: (T[member, basin], P[member, basin])} for windows {name: (a, b)}, for the units of the static
     weight set `wname` ("gefs" = the Idaho basins, "west_gefs" = the West-wide HUC4 units)."""
     lat, lon, _ = C.load_weights(wname)
     sub = ds.sel(init_time=t0, latitude=slice(lat.max() + 0.01, lat.min() - 0.01),
                  longitude=slice(lon.min() - 0.01, lon.max() + 0.01))
-    bmax = max(b for _, b in windows.values())
+    bmax = max([b for _, b in windows.values()] + [days or 0])     # `days` extends the daily precipitation only
     sub = sub.sel(lead_time=sub.lead_time[sub.lead_time <= np.timedelta64(24 * bmax, "h")])
     T = sub.temperature_2m.load()
     P = sub.precipitation_surface.load()
