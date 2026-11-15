@@ -57,7 +57,7 @@ cold-wet). The table shows the running basin-mean precipitation total (inches) f
 by the end of week 2. ECMWF members stop at day 15. Past skill is the ROC area in past forecasts for this basin and
 season: 0.5 is none, 1 is perfect, and it rests on about 25 events.</p></div>
 <style>.two{{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}} .two svg{{max-width:100%;height:auto}}
-svg text{{fill:var(--fg);font:11px system-ui,sans-serif}} svg .ax{{stroke:var(--mut);fill:none}}
+svg text{{fill:var(--fg);font:11px Inter,system-ui,sans-serif}} svg .ax{{stroke:var(--mut);fill:none}}
 select{{font:inherit;padding:3px 6px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}}</style>
 <script>
 (function(){{
